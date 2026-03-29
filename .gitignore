@@ -12,10 +12,10 @@ venv/
 node_modules/
 
 # Auth / secrets (never commit credentials)
-creprice_auth/
+scraper/housing-price/creprice_auth/
 
 # Scraped data
-housing_prices.json
+scraper/housing-price/housing_prices.json
 
 # OS artifacts
 nul
