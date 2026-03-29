@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Auth / secrets (never commit credentials)
+creprice_auth/
+
+# Scraped data
+housing_prices.json
+
+# OS artifacts
+nul
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
