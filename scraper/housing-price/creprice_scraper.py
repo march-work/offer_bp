@@ -9,12 +9,14 @@ creprice_scraper.py
   - 随机延迟 + 随机鼠标移动
   - 持久化 cookie（跨运行复用）
   - IP 被封时自动等待并重试
+  - 断点续爬：已爬取的数据自动保存到 data/info/，重启后跳过
 
 Usage:
-    python creprice_scraper.py                    # 默认运行
+    python creprice_scraper.py                    # 默认运行（支持断点续爬）
     python creprice_scraper.py --city 南京         # 只跑一个城市
     python creprice_scraper.py --month 2026-02    # 指定月份
     python creprice_scraper.py --output out.json   # 自定义输出
+    python creprice_scraper.py --reset             # 清除断点，重新开始
 """
 
 from __future__ import annotations
@@ -70,6 +72,7 @@ TRADES = [
 
 BASE_URL = 'https://www.creprice.cn'
 COOKIE_DIR = Path(__file__).parent / 'creprice_auth'
+DATA_DIR = Path(__file__).parent / 'data' / 'info'
 
 # 10 个真实 Chrome UA，随机轮换
 USER_AGENTS = [
@@ -90,6 +93,135 @@ PAGE_DELAY_MAX = 15
 
 # 遇到频率限制时的冷却时间（秒）
 COOLDOWN_SEC = 120
+
+# 验证码最大处理轮次
+MAX_CAPTCHA_ROUNDS = 5
+
+
+# ── ANSI Color Helpers ────────────────────────────────────────────────────
+
+C_RESET = '\033[0m'
+C_BOLD  = '\033[1m'
+C_DIM   = '\033[2m'
+C_RED   = '\033[91m'
+C_GREEN = '\033[92m'
+C_YELLOW = '\033[93m'
+C_BLUE  = '\033[94m'
+C_CYAN  = '\033[96m'
+C_WHITE = '\033[97m'
+
+
+def log(msg: str, color: str = C_RESET) -> None:
+    """打印带时间戳的彩色日志。"""
+    ts = datetime.now().strftime('%H:%M:%S')
+    print(f"{C_DIM}{ts}{C_RESET} {color}{msg}{C_RESET}", flush=True)
+
+
+def log_ok(msg: str) -> None:
+    log(f"  ✓ {msg}", C_GREEN)
+
+
+def log_fail(msg: str) -> None:
+    log(f"  ✗ {msg}", C_RED)
+
+
+def log_warn(msg: str) -> None:
+    log(f"  ⚠ {msg}", C_YELLOW)
+
+
+def log_info(msg: str) -> None:
+    log(f"  → {msg}", C_CYAN)
+
+
+def log_divider(char: str = '─', width: int = 60) -> None:
+    print(f"{C_DIM}{char * width}{C_RESET}", flush=True)
+
+
+def log_banner(title: str) -> None:
+    log_divider('═')
+    log(f"  {C_BOLD}{title}{C_RESET}")
+    log_divider('═')
+
+
+# ── Checkpoint / Resume ────────────────────────────────────────────────────
+
+def _checkpoint_path(data_month: str) -> Path:
+    return DATA_DIR / f'checkpoint_{data_month}.json'
+
+
+def _result_path(data_month: str) -> Path:
+    return DATA_DIR / f'result_{data_month}.json'
+
+
+def load_checkpoint(data_month: str) -> tuple[dict, dict]:
+    """加载断点文件和已有结果。
+
+    Returns:
+        (checkpoint_dict, results_dict)
+        checkpoint_dict 结构: {'completed': {'城市': {'区县': ['trade1', ...]}}}
+        results_dict 结构:   {'城市': {'province': ..., 'districts': {...}}}
+    """
+    cp_path = _checkpoint_path(data_month)
+    res_path = _result_path(data_month)
+
+    checkpoint: dict = {'completed': {}}
+    results: dict = {}
+
+    if cp_path.exists():
+        try:
+            checkpoint = json.loads(cp_path.read_text(encoding='utf-8'))
+            log_info(f"加载断点: {cp_path.name}")
+        except (json.JSONDecodeError, OSError) as e:
+            log_warn(f"断点文件损坏，忽略: {e}")
+
+    if res_path.exists():
+        try:
+            results = json.loads(res_path.read_text(encoding='utf-8'))
+            city_count = len(results)
+            dist_count = sum(len(c.get('districts', {})) for c in results.values())
+            log_info(f"加载已有数据: {city_count} 城市, {dist_count} 区县")
+        except (json.JSONDecodeError, OSError) as e:
+            log_warn(f"结果文件损坏，忽略: {e}")
+
+    return checkpoint, results
+
+
+def save_checkpoint(data_month: str, checkpoint: dict, results: dict) -> None:
+    """保存断点和中间结果到 data/info/。"""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    cp_path = _checkpoint_path(data_month)
+    res_path = _result_path(data_month)
+
+    try:
+        cp_path.write_text(
+            json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding='utf-8'
+        )
+        res_path.write_text(
+            json.dumps(results, ensure_ascii=False, indent=2), encoding='utf-8'
+        )
+    except OSError as e:
+        log_warn(f"保存断点失败: {e}")
+
+
+def is_completed(checkpoint: dict, city: str, district: str, trade_key: str) -> bool:
+    """检查某条记录是否已爬取完成。"""
+    return (
+        trade_key
+        in checkpoint.get('completed', {})
+        .get(city, {})
+        .get(district, [])
+    )
+
+
+def mark_completed(checkpoint: dict, city: str, district: str, trade_key: str) -> None:
+    """标记一条记录为已完成。"""
+    if city not in checkpoint['completed']:
+        checkpoint['completed'][city] = {}
+    if district not in checkpoint['completed'][city]:
+        checkpoint['completed'][city][district] = []
+    if trade_key not in checkpoint['completed'][city][district]:
+        checkpoint['completed'][city][district].append(trade_key)
 
 
 # ── Parsing ───────────────────────────────────────────────────────────────────
@@ -307,8 +439,33 @@ def human_mouse_move(page, selector: str | None = None) -> None:
 
 # ── Navigation ─────────────────────────────────────────────────────────────
 
+def _handle_captcha(page, url: str, round_num: int) -> str | None:
+    """处理单轮验证码。返回 HTML 或 None。"""
+    log_warn(f"验证码第 {C_BOLD}{round_num}/{MAX_CAPTCHA_ROUNDS}{C_YELLOW} 轮 "
+             f"— 请在浏览器中完成验证码输入！")
+    print()
+    input(f"  {C_CYAN}>>> 完成验证码后按 Enter 继续 <<<{C_RESET}")
+    print()
+
+    # 检查是否已回到主站
+    current_url = page.url
+    if 'authcode.creprice.cn' not in current_url:
+        log_ok(f"验证码通过 (第 {round_num} 轮)")
+        time.sleep(1)
+        page.goto(url, wait_until='domcontentloaded', timeout=30000)
+        time.sleep(human_delay(2, 4))
+        # 再次检查 — 可能在新导航中又触发验证码
+        if 'authcode.creprice.cn' in page.url:
+            return None  # 需要下一轮
+        return page.content()
+
+    # 还在验证码页 — 可能用户没完成，或者需要再来一轮
+    log_warn("仍在验证码页面，可能需要再输一轮")
+    return None
+
+
 def navigate(page, url: str) -> str | None:
-    """导航到 URL，处理 CAPTCHA 和频率限制。返回 HTML 或 None。"""
+    """导航到 URL，处理验证码和频率限制。返回 HTML 或 None。"""
     try:
         page.goto(url, wait_until='domcontentloaded', timeout=30000)
     except PlaywrightTimeout:
@@ -316,33 +473,31 @@ def navigate(page, url: str) -> str | None:
 
     time.sleep(human_delay(2, 4))
 
-    # 检查是否被重定向到验证码页
-    current_url = page.url
-    if 'authcode.creprice.cn' in current_url:
-        print()
-        print("=" * 55)
-        print("  [验证码] 请在浏览器窗口中手动输入验证码！")
-        print("  等待自动继续...")
-        print("=" * 55)
-        try:
-            page.wait_for_url('**/creprice.cn/**', timeout=300_000)
-            print("  [通过] 验证码已解决，重新导航...")
-            time.sleep(1)
-            page.goto(url, wait_until='domcontentloaded', timeout=30000)
-            time.sleep(human_delay(2, 4))
-            return page.content()
-        except PlaywrightTimeout:
-            print("  [超时] 验证码等待超时")
+    # ── 验证码处理（多轮循环） ──
+    captcha_round = 0
+    while 'authcode.creprice.cn' in page.url:
+        captcha_round += 1
+        if captcha_round > MAX_CAPTCHA_ROUNDS:
+            log_fail(f"验证码已连续 {MAX_CAPTCHA_ROUNDS} 轮未通过，跳过此页")
             return None
 
-    # 检查频率限制
+        log_banner(f"[验证码] 第 {captcha_round}/{MAX_CAPTCHA_ROUNDS} 轮")
+        result = _handle_captcha(page, url, captcha_round)
+        if result is not None:
+            return result
+        # result is None → 仍在验证码页，继续循环
+
+    # ── 频率限制检查 ──
     title = page.title()
     if '抱歉' in title or '频繁' in title:
-        print(f"  [频率限制] 等待 {COOLDOWN_SEC} 秒...")
+        log_warn(f"触发频率限制，等待 {COOLDOWN_SEC}s 冷却...")
         time.sleep(COOLDOWN_SEC)
         try:
             page.goto(url, wait_until='domcontentloaded', timeout=30000)
             time.sleep(human_delay(2, 4))
+            # 验证码可能在冷却后也出现
+            if 'authcode.creprice.cn' in page.url:
+                return navigate(page, url)  # 递归处理
             return page.content()
         except PlaywrightTimeout:
             return None
@@ -360,58 +515,152 @@ def navigate(page, url: str) -> str | None:
 
 # ── Main Scraper ──────────────────────────────────────────────────────────
 
-def scrape_city(city_name: str, city_code: str, context, data_month: str) -> dict:
-    """抓取一个城市的所有区县数据。"""
+def scrape_city(
+    city_name: str,
+    city_code: str,
+    context,
+    data_month: str,
+    checkpoint: dict,
+    all_results: dict,
+) -> dict:
+    """抓取一个城市的所有区县数据，支持断点续爬。"""
     seed_code = SEEDS.get(city_code)
     if not seed_code:
-        print(f"  [SKIP] {city_name}: 无种子区")
-        return {}
+        log_fail(f"{city_name}: 无种子区，跳过")
+        return all_results.get(city_name, {})
+
+    # 检查该城市是否已全部完成
+    city_cp = checkpoint.get('completed', {}).get(city_name, {})
 
     # Phase 1: 发现区县
     seed_url = f"{BASE_URL}/district/{seed_code}.html?city={city_code}"
-    print(f"  发现区县中...")
+    log_info("发现区县中...")
 
     html = navigate(context.new_page(), seed_url)
     if not html:
-        print(f"  [FAIL] {city_name}: 无法加载种子页")
-        return {}
+        log_fail(f"{city_name}: 无法加载种子页")
+        return all_results.get(city_name, {})
 
     province = extract_province(html, city_name)
     districts = parse_districts(html)
 
     if not districts:
-        print(f"  [SKIP] {city_name}: 未发现区县")
-        return {}
+        log_fail(f"{city_name}: 未发现区县")
+        return all_results.get(city_name, {})
 
-    print(f"  {len(districts)} 个区 (省: {province or '?'})")
+    log_info(f"发现 {C_BOLD}{len(districts)}{C_RESET} 个区 (省: {province or '?'})")
+
+    # 恢复已有数据或初始化
+    city_data = all_results.get(city_name, {'province': province, 'districts': {}})
+    city_data['province'] = province  # 确保省份信息最新
 
     # Phase 2: 逐区逐类型抓取
-    city_data = {'province': province, 'districts': {}}
+    total_tasks = len(districts) * len(TRADES)
+    done_tasks = 0
+    skipped_tasks = 0
+    start_time = time.time()
 
-    for dist_code, dist_name in districts:
-        entry = {}
+    for dist_idx, (dist_code, dist_name) in enumerate(districts, 1):
+        # 计算已完成数
+        completed_in_dist = sum(
+            1 for t in TRADES
+            if is_completed(checkpoint, city_name, dist_name, t['key'])
+        )
+        done_tasks += completed_in_dist
+        skipped_tasks += completed_in_dist
+
+        entry = city_data['districts'].get(dist_name, {})
+
+        # 跳过已全部完成的区县
+        if completed_in_dist == len(TRADES):
+            print(
+                f"  {C_DIM}[{dist_idx}/{len(districts)}] "
+                f"{dist_name} — 已完成，跳过{C_RESET}",
+                flush=True,
+            )
+            continue
+
+        print(
+            f"  [{C_CYAN}{dist_idx}/{len(districts)}{C_RESET}] "
+            f"{C_BOLD}{dist_name}{C_RESET}",
+            flush=True,
+        )
+
         for trade in TRADES:
+            # 断点跳过
+            if is_completed(checkpoint, city_name, dist_name, trade['key']):
+                print(
+                    f"    {C_DIM}├─ {trade['label']:　<6} 跳过（已有数据）{C_RESET}",
+                    flush=True,
+                )
+                continue
+
             url = f"{BASE_URL}/district/{dist_code}.html?city={city_code}"
             if trade['param']:
                 url += f"&type={trade['param']}"
 
             html = navigate(context.new_page(), url)
-            entry[trade['key']] = parse_overview(html) if html else None
+            parsed = parse_overview(html) if html else None
+            entry[trade['key']] = parsed
+
+            if parsed:
+                log_ok(f"{dist_name} → {trade['label']}: "
+                       f"{parsed.get('unit_price_display', 'N/A')}")
+                mark_completed(checkpoint, city_name, dist_name, trade['key'])
+                done_tasks += 1
+            else:
+                log_fail(f"{dist_name} → {trade['label']}: 无数据")
+                done_tasks += 1
+
+            # 每完成一个 trade 就保存断点
+            save_checkpoint(data_month, checkpoint, all_results)
 
             # 页面间随机延迟
-            time.sleep(human_delay(PAGE_DELAY_MIN, PAGE_DELAY_MAX))
+            delay = human_delay(PAGE_DELAY_MIN, PAGE_DELAY_MAX)
+            elapsed = time.time() - start_time
+            remaining_tasks = total_tasks - done_tasks
+            if remaining_tasks > 0:
+                avg_per_task = elapsed / max(done_tasks, 1)
+                eta_sec = avg_per_task * remaining_tasks
+                eta_min = int(eta_sec // 60)
+                eta_sec_rem = int(eta_sec % 60)
+                log_info(
+                    f"延迟 {delay:.0f}s | "
+                    f"进度 {done_tasks}/{total_tasks} | "
+                    f"预计剩余 {eta_min}m{eta_sec_rem:02d}s"
+                )
+            else:
+                log_info(f"延迟 {delay:.0f}s | 进度 {done_tasks}/{total_tasks}")
+
+            time.sleep(delay)
 
         city_data['districts'][dist_name] = entry
+
+    all_results[city_name] = city_data
+
+    # 最终保存
+    save_checkpoint(data_month, checkpoint, all_results)
+
+    elapsed = time.time() - start_time
+    if skipped_tasks > 0:
+        log_ok(
+            f"{city_name} 完成 | "
+            f"{done_tasks - skipped_tasks} 新爬取, {skipped_tasks} 跳过 | "
+            f"耗时 {elapsed:.0f}s"
+        )
+    else:
+        log_ok(f"{city_name} 完成 | 耗时 {elapsed:.0f}s")
 
     return city_data
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Creprice 隐身爬虫')
+    parser = argparse.ArgumentParser(description='Creprice 隐身爬虫（支持断点续爬）')
     parser.add_argument('--month', type=str, default=None, help='目标月份 YYYY-MM')
     parser.add_argument('--headless', action='store_true', help='无头模式')
     parser.add_argument('--output', type=str, default='housing_prices.json', help='输出 JSON 路径')
     parser.add_argument('--city', type=str, default=None, help='只爬指定城市')
+    parser.add_argument('--reset', action='store_true', help='清除断点，从头开始')
 
     args = parser.parse_args()
 
@@ -436,17 +685,33 @@ def main():
             print(f"可选: {', '.join(CITIES.keys())}")
             sys.exit(1)
 
-    print(f"Creprice 隐身爬虫 v2")
-    print(f"  月份: {data_month}")
-    print(f"  城市: {', '.join(cities.keys())}")
-    print(f"  延迟: {PAGE_DELAY_MIN}-{PAGE_DELAY_MAX}s/页")
-    print(f"  输出: {args.output}")
-    print(f"  模式: {'无头' if args.headless else '有头(推荐)'}")
+    # 断点：重置模式
+    if args.reset:
+        cp_path = _checkpoint_path(data_month)
+        res_path = _result_path(data_month)
+        for p in (cp_path, res_path):
+            if p.exists():
+                p.unlink()
+        log_info("已清除断点文件")
+
+    # ── Banner ──
     print()
+    log_banner(f"Creprice 隐身爬虫 v3 — 断点续爬")
+    log_info(f"月份: {C_BOLD}{data_month}{C_RESET}")
+    log_info(f"城市: {C_BOLD}{', '.join(cities.keys())}{C_RESET}")
+    log_info(f"延迟: {PAGE_DELAY_MIN}-{PAGE_DELAY_MAX}s/页")
+    log_info(f"输出: {args.output}")
+    log_info(f"数据: {DATA_DIR}")
+    log_info(f"模式: {'无头' if args.headless else '有头(推荐)'}")
+    print()
+
+    # 加载断点
+    checkpoint, cities_result = load_checkpoint(data_month)
 
     COOKIE_DIR.mkdir(exist_ok=True)
     start = time.time()
-    cities_result = {}
+    city_idx = 0
+    total_cities = len(cities)
 
     with sync_playwright() as p:
         # 使用 persistent context 保存 cookies（跨运行复用）
@@ -463,13 +728,25 @@ def main():
         context.add_init_script(stealth_init_script())
 
         for city_name, city_code in cities.items():
-            print(f"[{city_name}] ({city_code})")
-            result = scrape_city(city_name, city_code, context, data_month)
+            city_idx += 1
+            log_divider('─')
+            log(
+                f"  [{C_BOLD}{city_idx}/{total_cities}{C_RESET}] "
+                f"{C_BOLD}{city_name}{C_RESET} ({city_code})",
+                C_WHITE,
+            )
+            log_divider('─')
+
+            result = scrape_city(
+                city_name, city_code, context,
+                data_month, checkpoint, cities_result,
+            )
             if result:
                 cities_result[city_name] = result
 
     elapsed = time.time() - start
     print()
+    log_divider('═')
 
     # 统计
     total_dist = sum(len(c.get('districts', {})) for c in cities_result.values())
@@ -480,9 +757,11 @@ def main():
     )
     total = total_dist * 4
 
-    print(f"  耗时: {elapsed:.0f}s")
-    print(f"  区县: {total_dist}")
-    print(f"  数据: {filled}/{total} ({100 * filled // max(total, 1)}%)")
+    log(f"  {C_BOLD}抓取完成{C_RESET}")
+    log_info(f"总耗时: {elapsed / 60:.1f} 分钟")
+    log_info(f"城市: {len(cities_result)}/{total_cities}")
+    log_info(f"区县: {total_dist}")
+    log_info(f"有效数据: {C_BOLD}{filled}/{total}{C_RESET} ({100 * filled // max(total, 1)}%)")
 
     output = {
         'update_time': data_month,
@@ -494,7 +773,9 @@ def main():
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    print(f"  输出: {args.output}")
+    log_info(f"最终输出: {C_BOLD}{args.output}{C_RESET}")
+    log_info(f"断点数据: {C_BOLD}{DATA_DIR}{C_RESET}")
+    print()
 
 
 if __name__ == '__main__':
