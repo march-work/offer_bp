@@ -76,18 +76,9 @@ dailySalary = (年薪 × PPP_factor) / 实际年工作日数
 
 #### 3.1.1 PPP 标准化
 
-PPP（Purchasing Power Parity）用于跨国比较。将不同国家的薪资转换为购买力等价金额。
+PPP（Purchasing Power Parity）用于统一中国大陆内的购买力比较。
 
-PPP 因子查询表（数据来源见 `ppp-factors.ts`）：
-
-| 国家/地区 | PPP 因子 | 说明 |
-|-----------|----------|------|
-| 中国 | 4.19 | 1 元人民币 ≈ 4.19 分（购买力折算） |
-| 美国 | 1.0 | 基准 |
-| 日本 | 1.2 | |
-| ... | ... | 完整表见 `ppp-factors.ts` |
-
-**注意**：对于中国市场内的比较，PPP 因子主要影响跨国用户的对比结果。同一国家内不同城市间的差异由"城市系数"处理。
+本项目仅面向中国大陆，PPP 因子固定为中国大陆的值（4.19），即 1 元人民币 ≈ 4.19 分（购买力折算）。
 
 #### 3.1.2 实际年工作日数
 
@@ -113,11 +104,9 @@ PPP 因子查询表（数据来源见 `ppp-factors.ts`）：
 
 ```
 年薪 = ¥220,000, PPP = 4.19, 年工作日 = 240.2
-dailySalary = (220,000 × 4.19) / 240.2 = ¥3,836.39
+dailySalary = (220,000 × 4.19) / 240.2
+            = ¥3,836.39
 ```
-
-> **实现提示**：PPP 标准化可能采用简化处理（直接用 PPP 做除数或其他方式）。实现时需确认项目统一的 PPP 处理方式并保持一致。
-
 ---
 
 ### 3.2 envFactor — 环境系数
@@ -358,7 +347,6 @@ effectiveHours = 9 + 1 × 1.0 × 1.0 - 0.5 × 1.5 = 9.25h
 | 模块 | 字段 | 类型 | 默认值 |
 |------|------|------|--------|
 | **薪资** | 年薪 | 数字输入 | — |
-| | 国家/地区 | 选择 | 中国 |
 | **工时** | 每周工作天数 | 选择 | 5 |
 | | WFH 天数 | 选择 | 0 |
 | | 年假 | 数字 | 5 |
@@ -397,7 +385,6 @@ effectiveHours = 9 + 1 × 1.0 × 1.0 - 0.5 × 1.5 = 9.25h
 学历: 本科, 学校等级: 985/211
 目标城市: 成都（新一线）, 目标行业: 互联网
 年薪: ¥220,000
-国家: 中国 (PPP=4.19)
 每周工作: 5天, WFH: 0天
 年假: 5天, 法定假日: 13天, 带薪病假: 3天
 日均工时: 9h, 通勤: 1h, 休息: 1.5h
@@ -452,15 +439,6 @@ Score = (dailySalary × envFactor × 8) / (expectedDailySalary × effectiveHours
       = (3836.39 × 1.0648 × 8) / (692.31 × 9.25)
       = 32,666.52 / 6,403.87
       ≈ 5.10
-```
-
-> **注意**：以上数字包含了 PPP 标准化。如果项目中 PPP 不以这种方式参与计算（例如仅用于跨国显示），则应去掉 PPP 因子。以下是不含 PPP 的版本：
-
-```
-dailySalary = 220,000 / 240.2 = ¥915.90
-Score = (915.90 × 1.0648 × 8) / (692.31 × 9.25)
-      = 7,801.88 / 6,403.87
-      ≈ 1.218 → 评级「不错」🟢
 ```
 
 #### 第 ⑦ 步：对比不同工时
@@ -526,16 +504,12 @@ Score = (dailySalary × envFactor × 8) / (expectedDailySalary × effectiveHours
 
 | 模块 | 函数/数据 | 复用方式 |
 |------|-----------|----------|
-| PPP 因子表 | `pppFactors` 映射 | 直接 copy `ppp-factors.ts` |
-| 货币符号表 | `currencySymbols` 映射 | 直接 copy `currency-symbols.ts` |
-| 国家名称映射 | `countryNames` 映射 | 直接 copy `country-names.ts` |
+| PPP 因子表 | `pppFactors` 映射 | 直接 copy `ppp-factors.ts`（仅中国大陆） |
 | 年工作日计算 | `calculateWorkingDays()` | 直接复用 |
-| 日薪计算 | `calculateDailySalary()` | 直接复用（含 PPP） |
+| 日薪计算 | `calculateDailySalary()` | 直接复用 |
 | 环境系数计算 | envFactor 子因子逻辑 | 直接复用 |
 | 有效通勤计算 | officeRatio + shuttleFactor | 直接复用 |
 | 有效工时计算 | effectiveHours 公式 | 直接复用 |
-| 语言上下文 | `LanguageContext` | 复用架构 |
-| 语言切换器 | `LanguageSwitcher` | 直接复用 |
 | 截图下载 | html2canvas + URL 参数 | 复用机制 |
 
 **不使用的模块**：
