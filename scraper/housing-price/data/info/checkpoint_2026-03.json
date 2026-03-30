@@ -1,0 +1,371 @@
+{
+  "completed": {
+    "北京": {
+      "昌平区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "朝阳区": [
+        "secondhand",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "大兴区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "东城区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "房山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "丰台区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "海淀区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "怀柔区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "门头沟区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "密云区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "平谷区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "石景山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "顺义区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "通州区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "西城区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "延庆区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "中关村科技园区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "上海": {
+      "宝山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "崇明区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "奉贤区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "虹口区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "黄浦区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "嘉定区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "静安区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "金山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "闵行区": [
+        "secondhand",
+        "newhome",
+        "shared_rent"
+      ],
+      "浦东新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "普陀区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "青浦区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "松江区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "徐汇区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "杨浦区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "长宁区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "上海化学工业经开区": [
+        "newhome"
+      ],
+      "松江经开区": [
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "上海金桥出口加工区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "闵行经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "虹桥经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "上海漕河泾新兴技术开发区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "上海紫竹高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "张江高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "广州": {
+      "白云区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "从化区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "番禺区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "海珠区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "花都区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "黄埔区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "荔湾区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "南沙区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "天河区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "越秀区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "增城区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "广州经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "南沙经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "增城经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "深圳": {
+      "宝安区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "福田区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "光明区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "龙岗区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "龙华区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    }
+  }
+}
