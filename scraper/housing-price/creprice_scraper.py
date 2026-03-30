@@ -19,6 +19,7 @@ creprice_scraper.py
   - 持久化 cookie（跨运行复用）
   - IP 被封时自动冷却并重试
   - 断点续爬：已爬取数据自动保存到 data/info/，重启后跳过
+  - 代理支持：--proxy 参数传入代理地址，启动时及每 15 分钟提醒更新
 
 Usage:
     python creprice_scraper.py                    # 默认运行（支持断点续爬）
@@ -26,6 +27,7 @@ Usage:
     python creprice_scraper.py --month 2026-02    # 指定月份
     python creprice_scraper.py --output out.json   # 自定义输出
     python creprice_scraper.py --reset             # 清除断点，重新开始
+    python creprice_scraper.py --proxy http://117.86.187.56:15574  # 使用代理
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ import json
 import random
 import re
 import sys
+import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime
@@ -130,6 +133,12 @@ MAX_REASONABLE_RENT_PRICE = 1_000_000   # 1,000,000 元/月（租金上限）
 # 设为更大值（如 4 = 每区保存一次）可减少磁盘 I/O
 CHECKPOINT_SAVE_INTERVAL = 1
 
+# 代理提醒间隔（秒）
+PROXY_REMIND_INTERVAL = 15 * 60  # 15 分钟
+
+# 免费代理网站
+PROXY_SOURCE_URL = 'https://www.kuaidaili.com/free/'
+
 
 # ── ANSI Color Helpers ────────────────────────────────────────────────────
 
@@ -174,6 +183,43 @@ def log_banner(title: str) -> None:
     log_divider('═')
     log(f"  {C_BOLD}{title}{C_RESET}")
     log_divider('═')
+
+
+def log_proxy_reminder(proxy: str | None) -> None:
+    """打印代理更新提醒，带有醒目标识。"""
+    log_divider('*')
+    log_warn("代理已使用约 15 分钟，建议更新代理 IP！")
+    log_info(f"免费代理源: {C_BOLD}{PROXY_SOURCE_URL}{C_RESET}")
+    if proxy:
+        log_info(f"当前代理: {C_BOLD}{proxy}{C_RESET}")
+    log_warn("更新后重新运行脚本即可（断点会自动续爬）")
+    log_divider('*')
+
+
+# ── Proxy Reminder Thread ─────────────────────────────────────────────────
+
+class ProxyReminder:
+    """每 15 分钟在控制台提醒更新代理 IP 的后台线程。"""
+
+    def __init__(self, get_proxy_func):
+        self._get_proxy = get_proxy_func
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join(timeout=2)
+
+    def _loop(self) -> None:
+        while not self._stop_event.wait(timeout=PROXY_REMIND_INTERVAL):
+            proxy = self._get_proxy()
+            log_proxy_reminder(proxy)
 
 
 # ── Checkpoint / Resume ────────────────────────────────────────────────────
@@ -729,6 +775,21 @@ def navigate(page, url: str) -> str | None:
         except PlaywrightTimeout:
             log_fail(f"页面加载超时 (第 {attempt} 次)")
             return None
+        except Exception as e:
+            err_msg = str(e)
+            if 'ERR_PROXY_CONNECTION_FAILED' in err_msg:
+                log_fail(f"代理连接失败！请检查代理是否可用或更换代理")
+                log_fail(f"  错误: {err_msg}")
+                return None
+            if 'ERR_CONNECTION' in err_msg or 'ERR_TUNNEL' in err_msg:
+                log_fail(f"网络连接错误 (第 {attempt} 次): {err_msg}")
+                if attempt < MAX_NAV_DEPTH:
+                    time.sleep(5)
+                    continue
+                return None
+            # 其他未知错误也优雅处理
+            log_fail(f"页面加载异常 (第 {attempt} 次): {err_msg}")
+            return None
 
         time.sleep(human_delay(2, 4))
 
@@ -920,12 +981,14 @@ def scrape_city(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Creprice 隐身爬虫（支持断点续爬）')
+    parser = argparse.ArgumentParser(description='Creprice 隐身爬虫（支持断点续爬 + 代理)')
     parser.add_argument('--month', type=str, default=None, help='目标月份 YYYY-MM')
     parser.add_argument('--headless', action='store_true', help='无头模式')
     parser.add_argument('--output', type=str, default='housing_prices.json', help='输出 JSON 路径')
     parser.add_argument('--city', type=str, default=None, help='只爬指定城市')
     parser.add_argument('--reset', action='store_true', help='清除断点，从头开始')
+    parser.add_argument('--proxy', type=str, default=None,
+                        help='HTTP 代理地址，格式: http://IP:PORT 或 https://IP:PORT')
 
     args = parser.parse_args()
 
@@ -950,6 +1013,9 @@ def main():
             print(f"可选: {', '.join(CITIES.keys())}")
             sys.exit(1)
 
+    # 代理
+    current_proxy = args.proxy
+
     # 断点：重置模式
     if args.reset:
         cp_path = _checkpoint_path(data_month)
@@ -957,17 +1023,31 @@ def main():
         for p in (cp_path, res_path):
             if p.exists():
                 p.unlink()
+        # 也删除单城市断点
+        for city_name in CITIES:
+            city_res_path = _city_result_path(data_month, city_name)
+            if city_res_path.exists():
+                city_res_path.unlink()
         log_info("已清除断点文件")
 
     # ── Banner ──
     print()
-    log_banner(f"Creprice 隐身爬虫 v4 — 增强反检测 + 断点续爬")
+    log_banner(f"Creprice 隐身爬虫 v4 — 增强反检测 + 断点续爬 + 代理")
     log_info(f"月份: {C_BOLD}{data_month}{C_RESET}")
     log_info(f"城市: {C_BOLD}{', '.join(cities.keys())}{C_RESET}")
     log_info(f"延迟: {PAGE_DELAY_MIN}-{PAGE_DELAY_MAX}s/页")
     log_info(f"输出: {args.output}")
     log_info(f"数据: {DATA_DIR}")
     log_info(f"模式: {'无头' if args.headless else '有头(推荐)'}")
+
+    # 代理信息
+    if current_proxy:
+        log_info(f"代理: {C_BOLD}{current_proxy}{C_RESET}")
+        log_info(f"代理源: {C_BOLD}{PROXY_SOURCE_URL}{C_RESET}")
+        log_warn(f"免费代理 15 分钟过期，请及时更新！每 {PROXY_REMIND_INTERVAL // 60} 分钟更新一次")
+    else:
+        log_info(f"代理: 无（直连）")
+
     print()
 
     # 加载断点
@@ -978,40 +1058,60 @@ def main():
     city_idx = 0
     total_cities = len(cities)
 
-    with sync_playwright() as p:
-        for city_name, city_code in cities.items():
-            city_idx += 1
+    # 启动代理提醒线程
+    reminder: ProxyReminder | None = None
+    if current_proxy:
+        reminder = ProxyReminder(lambda: current_proxy)
+        reminder.start()
 
-            # 每个城市独立 context → UA + 视口轮换，同时保持 cookie 持久化
-            vp = random.choice(VIEWPORTS)
-            ua = random.choice(USER_AGENTS)
+    try:
+        with sync_playwright() as p:
+            for city_name, city_code in cities.items():
+                city_idx += 1
 
-            log_divider('─')
-            log(
-                f"  [{C_BOLD}{city_idx}/{total_cities}{C_RESET}] "
-                f"{C_BOLD}{city_name}{C_RESET} ({city_code}) "
-                f"{C_DIM}[{vp['width']}x{vp['height']}] [{ua[:42]}...]{C_RESET}",
-                C_WHITE,
-            )
-            log_divider('─')
+                vp = random.choice(VIEWPORTS)
+                ua = random.choice(USER_AGENTS)
 
-            context = p.chromium.launch_persistent_context(
-                user_data_dir=str(COOKIE_DIR),
-                headless=args.headless,
-                locale='zh-CN',
-                viewport=vp,
-                args=['--disable-blink-features=AutomationControlled'],
-                user_agent=ua,
-            )
-            context.add_init_script(stealth_init_script())
+                # 每个城市间提示更新代理
+                if current_proxy:
+                    log_proxy_reminder(current_proxy)
 
-            try:
-                scrape_city(
-                    city_name, city_code, context,
-                    data_month, checkpoint, cities_result,
+                log_divider('─')
+                log(
+                    f"  [{C_BOLD}{city_idx}/{total_cities}{C_RESET}] "
+                    f"{C_BOLD}{city_name}{C_RESET} ({city_code}) "
+                    f"{C_DIM}[{vp['width']}x{vp['height']}] [{ua[:42]}...]{C_RESET}",
+                    C_WHITE,
                 )
-            finally:
-                context.close()
+                log_divider('─')
+
+                # 构建 context 参数
+                context_kwargs: dict = {}
+                if current_proxy:
+                    context_kwargs['proxy'] = {'server': current_proxy}
+
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=str(COOKIE_DIR),
+                    headless=args.headless,
+                    locale='zh-CN',
+                    viewport=vp,
+                    args=['--disable-blink-features=AutomationControlled'],
+                    user_agent=ua,
+                    **context_kwargs,
+                )
+                context.add_init_script(stealth_init_script())
+
+                try:
+                    scrape_city(
+                        city_name, city_code, context,
+                        data_month, checkpoint, cities_result,
+                    )
+                finally:
+                    context.close()
+    finally:
+        # 停止代理提醒线程
+        if reminder:
+            reminder.stop()
 
     elapsed = time.time() - start
     print()
