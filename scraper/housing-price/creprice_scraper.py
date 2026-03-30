@@ -19,15 +19,16 @@ creprice_scraper.py
   - 持久化 cookie（跨运行复用）
   - IP 被封时自动冷却并重试
   - 断点续爬：已爬取数据自动保存到 data/info/，重启后跳过
-  - 代理支持：--proxy 参数传入代理地址，启动时及每 15 分钟提醒更新
+  - 代理支持：自动从快代理发现可用 IP，验证后使用；失效自动切换
+  - 断点续爬：已爬取数据自动保存到 data/info/，重启后跳过
 
 Usage:
-    python creprice_scraper.py                    # 默认运行（支持断点续爬）
-    python creprice_scraper.py --city 南京         # 只跑一个城市
-    python creprice_scraper.py --month 2026-02    # 指定月份
-    python creprice_scraper.py --output out.json   # 自定义输出
-    python creprice_scraper.py --reset             # 清除断点，重新开始
-    python creprice_scraper.py --proxy http://117.86.187.56:15574  # 使用代理
+    python creprice_scraper.py                        # 自动发现代理 + 断点续爬
+    python creprice_scraper.py --city 南京             # 只跑一个城市
+    python creprice_scraper.py --month 2026-02        # 指定月份
+    python creprice_scraper.py --output out.json       # 自定义输出
+    python creprice_scraper.py --reset                 # 清除断点，重新开始
+    python creprice_scraper.py --proxy http://IP:PORT  # 手动指定代理（失效后仍自动切换）
 """
 
 from __future__ import annotations
@@ -39,6 +40,8 @@ import re
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -188,38 +191,155 @@ def log_banner(title: str) -> None:
 def log_proxy_reminder(proxy: str | None) -> None:
     """打印代理更新提醒，带有醒目标识。"""
     log_divider('*')
-    log_warn("代理已使用约 15 分钟，建议更新代理 IP！")
-    log_info(f"免费代理源: {C_BOLD}{PROXY_SOURCE_URL}{C_RESET}")
+    log_warn("代理已使用约 15 分钟，免费代理可能即将过期！")
+    log_info(f"代理源: {C_BOLD}{PROXY_SOURCE_URL}{C_RESET}")
     if proxy:
         log_info(f"当前代理: {C_BOLD}{proxy}{C_RESET}")
-    log_warn("更新后重新运行脚本即可（断点会自动续爬）")
+    log_info(f"代理失效后会自动切换，无需手动操作")
     log_divider('*')
 
 
-# ── Proxy Reminder Thread ─────────────────────────────────────────────────
+# ── Proxy Failed Signal ─────────────────────────────────────────────────────
 
-class ProxyReminder:
-    """每 15 分钟在控制台提醒更新代理 IP 的后台线程。"""
+class ProxyFailedError(Exception):
+    """代理连接失败时抛出，触发主循环自动换代理重试当前城市。"""
+    pass
 
-    def __init__(self, get_proxy_func):
-        self._get_proxy = get_proxy_func
+
+# ── Proxy Fetch / Verify ────────────────────────────────────────────────────
+
+def fetch_free_proxies(timeout: int = 10) -> list[str]:
+    """从快代理免费页面抓取代理 IP 列表。
+
+    使用 urllib 直接请求（不需要代理即可访问快代理），
+    解析表格提取 IP:PORT，返回 http://IP:PORT 格式列表。
+    """
+    log_info(f"正在从 {C_BOLD}{PROXY_SOURCE_URL}{C_RESET} 获取免费代理...")
+    proxies: list[str] = []
+    try:
+        req = urllib.request.Request(
+            PROXY_SOURCE_URL,
+            headers={'User-Agent': random.choice(USER_AGENTS)},
+        )
+        resp = urllib.request.urlopen(req, timeout=timeout)
+        html = resp.read().decode('utf-8', errors='ignore')
+
+        # 提取每行中的 IP 和 PORT
+        # 快代理 HTML 格式: <td data-title="IP">x.x.x.x</td> <td data-title="PORT">1234</td>
+        ip_pattern = re.compile(
+            r'(?:data-title="IP"[^>]*>|<td>)\s*(\d+\.\d+\.\d+\.\d+)\s*</td>'
+            r'.*?'
+            r'(?:data-title="PORT"[^>]*>|<td>)\s*(\d+)\s*</td>',
+            re.DOTALL,
+        )
+        for m in ip_pattern.finditer(html):
+            ip, port = m.group(1), m.group(2)
+            proxies.append(f"http://{ip}:{port}")
+
+        log_ok(f"获取到 {len(proxies)} 个代理 IP")
+    except Exception as e:
+        log_fail(f"获取代理列表失败: {e}")
+
+    return proxies
+
+
+def quick_verify_proxy(proxy_url: str, timeout: int = 15) -> bool:
+    """快速验证代理是否可以正常访问 creprice.cn（无验证码/频率限制）。
+
+    使用 urllib 轻量 HTTP 请求，避免启动浏览器。
+    """
+    try:
+        proxy_handler = urllib.request.ProxyHandler({
+            'http': proxy_url,
+            'https': proxy_url,
+        })
+        opener = urllib.request.build_opener(proxy_handler)
+        req = urllib.request.Request(
+            BASE_URL,
+            headers={'User-Agent': random.choice(USER_AGENTS)},
+        )
+        resp = opener.open(req, timeout=timeout)
+        html = resp.read().decode('utf-8', errors='ignore')
+
+        # 被重定向到验证码页面
+        if 'authcode' in html or '验证码' in html:
+            return False
+        # 触发频率限制
+        if '抱歉' in html and '频繁' in html:
+            return False
+        # 正常页面应包含关键词
+        if resp.status == 200 and len(html) > 2000:
+            return True
+        return False
+    except Exception:
+        return False
+
+
+# ── Proxy Manager ───────────────────────────────────────────────────────────
+
+class ProxyManager:
+    """代理管理器：自动获取、验证、轮换代理 + 15 分钟过期提醒。"""
+
+    # 每个城市最多因代理重试几次
+    MAX_PROXY_RETRIES = 3
+
+    def __init__(self, initial_proxy: str | None = None):
+        self._current: str | None = initial_proxy
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
 
-    def start(self) -> None:
+    # ── 公开接口 ──
+
+    def get_proxy(self) -> str | None:
+        """返回当前可用代理。如果当前代理为空，自动发现一个。"""
+        if self._current:
+            return self._current
+        return self._discover()
+
+    def mark_failed(self):
+        """标记当前代理失效，下次 get_proxy() 会自动换新。"""
+        if self._current:
+            log_fail(f"代理已失效: {self._current}")
+        self._current = None
+
+    def start_reminder(self):
+        """启动 15 分钟过期提醒后台线程。"""
         self._stop_event.clear()
-        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread = threading.Thread(target=self._reminder_loop, daemon=True)
         self._thread.start()
 
-    def stop(self) -> None:
+    def stop_reminder(self):
+        """停止提醒线程。"""
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=2)
 
-    def _loop(self) -> None:
+    # ── 内部方法 ──
+
+    def _discover(self) -> str | None:
+        """从快代理获取并逐个验证，返回第一个可用的代理。"""
+        proxies = fetch_free_proxies()
+        if not proxies:
+            log_warn("未获取到任何代理，尝试直连")
+            return None
+
+        log_info(f"开始逐个验证 {len(proxies)} 个代理（可访问 creprice.cn 且无验证码）...")
+        for i, proxy in enumerate(proxies, 1):
+            log_info(f"  测试 {i}/{len(proxies)}: {proxy}")
+            if quick_verify_proxy(proxy):
+                self._current = proxy
+                log_ok(f"  可用: {proxy}")
+                return proxy
+            # 每 10 个打印一次进度
+            if i % 10 == 0 and i < len(proxies):
+                log_info(f"  已测试 {i}/{len(proxies)}，继续...")
+
+        log_warn("所有代理均不可用，尝试直连")
+        return None
+
+    def _reminder_loop(self) -> None:
         while not self._stop_event.wait(timeout=PROXY_REMIND_INTERVAL):
-            proxy = self._get_proxy()
-            log_proxy_reminder(proxy)
+            log_proxy_reminder(self._current)
 
 
 # ── Checkpoint / Resume ────────────────────────────────────────────────────
@@ -778,9 +898,7 @@ def navigate(page, url: str) -> str | None:
         except Exception as e:
             err_msg = str(e)
             if 'ERR_PROXY_CONNECTION_FAILED' in err_msg:
-                log_fail(f"代理连接失败！请检查代理是否可用或更换代理")
-                log_fail(f"  错误: {err_msg}")
-                return None
+                raise ProxyFailedError(err_msg)
             if 'ERR_CONNECTION' in err_msg or 'ERR_TUNNEL' in err_msg:
                 log_fail(f"网络连接错误 (第 {attempt} 次): {err_msg}")
                 if attempt < MAX_NAV_DEPTH:
@@ -988,7 +1106,7 @@ def main():
     parser.add_argument('--city', type=str, default=None, help='只爬指定城市')
     parser.add_argument('--reset', action='store_true', help='清除断点，从头开始')
     parser.add_argument('--proxy', type=str, default=None,
-                        help='HTTP 代理地址，格式: http://IP:PORT 或 https://IP:PORT')
+                        help='手动指定代理（如 http://IP:PORT），否则自动从快代理发现可用代理')
 
     args = parser.parse_args()
 
@@ -1013,17 +1131,13 @@ def main():
             print(f"可选: {', '.join(CITIES.keys())}")
             sys.exit(1)
 
-    # 代理
-    current_proxy = args.proxy
-
-    # 断点：重置模式
+    # ── 断点：重置模式 ──
     if args.reset:
         cp_path = _checkpoint_path(data_month)
         res_path = _result_path(data_month)
         for p in (cp_path, res_path):
             if p.exists():
                 p.unlink()
-        # 也删除单城市断点
         for city_name in CITIES:
             city_res_path = _city_result_path(data_month, city_name)
             if city_res_path.exists():
@@ -1032,23 +1146,20 @@ def main():
 
     # ── Banner ──
     print()
-    log_banner(f"Creprice 隐身爬虫 v4 — 增强反检测 + 断点续爬 + 代理")
+    log_banner("Creprice 隐身爬虫 v5 — 自动代理发现 + 断点续爬")
     log_info(f"月份: {C_BOLD}{data_month}{C_RESET}")
     log_info(f"城市: {C_BOLD}{', '.join(cities.keys())}{C_RESET}")
     log_info(f"延迟: {PAGE_DELAY_MIN}-{PAGE_DELAY_MAX}s/页")
     log_info(f"输出: {args.output}")
     log_info(f"数据: {DATA_DIR}")
     log_info(f"模式: {'无头' if args.headless else '有头(推荐)'}")
-
-    # 代理信息
-    if current_proxy:
-        log_info(f"代理: {C_BOLD}{current_proxy}{C_RESET}")
-        log_info(f"代理源: {C_BOLD}{PROXY_SOURCE_URL}{C_RESET}")
-        log_warn(f"免费代理 15 分钟过期，请及时更新！每 {PROXY_REMIND_INTERVAL // 60} 分钟更新一次")
-    else:
-        log_info(f"代理: 无（直连）")
-
     print()
+
+    # ── 初始化代理管理器 ──
+    proxy_manager = ProxyManager(initial_proxy=args.proxy)
+
+    # 启动 15 分钟提醒线程
+    proxy_manager.start_reminder()
 
     # 加载断点
     checkpoint, cities_result = load_checkpoint(data_month)
@@ -1058,60 +1169,68 @@ def main():
     city_idx = 0
     total_cities = len(cities)
 
-    # 启动代理提醒线程
-    reminder: ProxyReminder | None = None
-    if current_proxy:
-        reminder = ProxyReminder(lambda: current_proxy)
-        reminder.start()
-
     try:
         with sync_playwright() as p:
             for city_name, city_code in cities.items():
                 city_idx += 1
 
-                vp = random.choice(VIEWPORTS)
-                ua = random.choice(USER_AGENTS)
+                # ── 城市级别代理重试 ──
+                # 如果 --proxy 手动指定，先试手动代理；失败后也自动发现
+                proxy_retry = 0
+                max_proxy_retries = ProxyManager.MAX_PROXY_RETRIES
 
-                # 每个城市间提示更新代理
-                if current_proxy:
-                    log_proxy_reminder(current_proxy)
+                while proxy_retry < max_proxy_retries:
+                    # 获取当前代理（可能是手动的，也可能是自动发现的）
+                    proxy = proxy_manager.get_proxy()
 
-                log_divider('─')
-                log(
-                    f"  [{C_BOLD}{city_idx}/{total_cities}{C_RESET}] "
-                    f"{C_BOLD}{city_name}{C_RESET} ({city_code}) "
-                    f"{C_DIM}[{vp['width']}x{vp['height']}] [{ua[:42]}...]{C_RESET}",
-                    C_WHITE,
-                )
-                log_divider('─')
+                    vp = random.choice(VIEWPORTS)
+                    ua = random.choice(USER_AGENTS)
 
-                # 构建 context 参数
-                context_kwargs: dict = {}
-                if current_proxy:
-                    context_kwargs['proxy'] = {'server': current_proxy}
-
-                context = p.chromium.launch_persistent_context(
-                    user_data_dir=str(COOKIE_DIR),
-                    headless=args.headless,
-                    locale='zh-CN',
-                    viewport=vp,
-                    args=['--disable-blink-features=AutomationControlled'],
-                    user_agent=ua,
-                    **context_kwargs,
-                )
-                context.add_init_script(stealth_init_script())
-
-                try:
-                    scrape_city(
-                        city_name, city_code, context,
-                        data_month, checkpoint, cities_result,
+                    log_divider('─')
+                    proxy_label = f"代理: {C_BOLD}{proxy}{C_RESET}" if proxy else f"{C_DIM}直连{C_RESET}"
+                    log(
+                        f"  [{C_BOLD}{city_idx}/{total_cities}{C_RESET}] "
+                        f"{C_BOLD}{city_name}{C_RESET} ({city_code}) "
+                        f"{C_DIM}[{vp['width']}x{vp['height']}] [{proxy_label}]",
+                        C_WHITE,
                     )
-                finally:
-                    context.close()
+                    log_divider('─')
+
+                    # 构建 context
+                    context_kwargs: dict = {}
+                    if proxy:
+                        context_kwargs['proxy'] = {'server': proxy}
+
+                    context = p.chromium.launch_persistent_context(
+                        user_data_dir=str(COOKIE_DIR),
+                        headless=args.headless,
+                        locale='zh-CN',
+                        viewport=vp,
+                        args=['--disable-blink-features=AutomationControlled'],
+                        user_agent=ua,
+                        **context_kwargs,
+                    )
+                    context.add_init_script(stealth_init_script())
+
+                    try:
+                        scrape_city(
+                            city_name, city_code, context,
+                            data_month, checkpoint, cities_result,
+                        )
+                        break  # 成功，跳出重试循环，进入下一个城市
+                    except ProxyFailedError:
+                        proxy_retry += 1
+                        proxy_manager.mark_failed()
+                        if proxy_retry < max_proxy_retries:
+                            log_info(f"正在自动发现新代理，重试城市 {city_name} "
+                                     f"({proxy_retry}/{max_proxy_retries})")
+                        else:
+                            log_fail(f"城市 {city_name} 代理重试 {max_proxy_retries} 次"
+                                      f"均失败，跳过该城市")
+                    finally:
+                        context.close()
     finally:
-        # 停止代理提醒线程
-        if reminder:
-            reminder.stop()
+        proxy_manager.stop_reminder()
 
     elapsed = time.time() - start
     print()
