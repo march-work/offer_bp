@@ -11,11 +11,12 @@ venv/
 # Node
 node_modules/
 
-# Auth / secrets (never commit credentials)
+# Browser auth / session data (never commit)
 scraper/housing-price/creprice_auth/
 
-# Scraped data
+# Scraped data output
 scraper/housing-price/housing_prices.json
+scraper/housing-price/data/
 
 # OS artifacts
 nul
