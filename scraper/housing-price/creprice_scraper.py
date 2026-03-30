@@ -4,12 +4,21 @@ creprice_scraper.py
 从 creprice.cn 抓取中国 11 个主要城市的区县级房价/租金数据。
 
 反检测措施：
-  - playwright-stealth 隐身（移除 webdriver 标志、伪造指纹）
-  - 随机化 User-Agent
-  - 随机延迟 + 随机鼠标移动
+  - navigator.webdriver / plugins / languages / chrome.runtime 伪装
+  - Canvas 指纹噪声注入（每次指纹不同）
+  - WebGL vendor/renderer 伪造（WebGL + WebGL2）
+  - WebRTC IP 泄露防护（SDP 候选剥离）
+  - Screen 属性与视口一致性伪装
+  - Device Memory / Network Connection API 伪造
+  - Permission API / matchMedia 伪装
+  - CDP / Playwright 自动化特征清除
+  - iframe 注入隔离（子 frame 也隐藏 webdriver）
+  - 随机 User-Agent（每城市轮换）
+  - 随机视口分辨率（每城市轮换）
+  - 贝塞尔曲线鼠标轨迹 + 多段随机滚动
   - 持久化 cookie（跨运行复用）
-  - IP 被封时自动等待并重试
-  - 断点续爬：已爬取的数据自动保存到 data/info/，重启后跳过
+  - IP 被封时自动冷却并重试
+  - 断点续爬：已爬取数据自动保存到 data/info/，重启后跳过
 
 Usage:
     python creprice_scraper.py                    # 默认运行（支持断点续爬）
@@ -23,11 +32,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import random
 import re
 import sys
 import time
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -74,7 +83,7 @@ BASE_URL = 'https://www.creprice.cn'
 COOKIE_DIR = Path(__file__).parent / 'creprice_auth'
 DATA_DIR = Path(__file__).parent / 'data' / 'info'
 
-# 10 个真实 Chrome UA，随机轮换
+# 9 个真实桌面 UA，每城市随机轮换
 USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
@@ -87,15 +96,39 @@ USER_AGENTS = [
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
 ]
 
+# 常见桌面分辨率，每城市随机选取
+VIEWPORTS = [
+    {'width': 1920, 'height': 1080},
+    {'width': 1366, 'height': 768},
+    {'width': 1536, 'height': 864},
+    {'width': 1440, 'height': 900},
+    {'width': 1280, 'height': 720},
+    {'width': 1600, 'height': 900},
+    {'width': 1680, 'height': 1050},
+    {'width': 2560, 'height': 1440},
+]
+
 # 页面间延迟范围（秒），随机取值
-PAGE_DELAY_MIN = 8
-PAGE_DELAY_MAX = 15
+PAGE_DELAY_MIN = 1.5
+PAGE_DELAY_MAX = 5
 
 # 遇到频率限制时的冷却时间（秒）
 COOLDOWN_SEC = 120
 
 # 验证码最大处理轮次
 MAX_CAPTCHA_ROUNDS = 5
+
+# 导航最大重试次数（防止无限循环）
+MAX_NAV_DEPTH = 5
+
+# 数据合理性校验阈值
+MAX_REASONABLE_UNIT_PRICE = 1_000_000   # 100 万元/㎡ 上限
+MAX_REASONABLE_TOTAL_PRICE = 100_000     # 100,000 万元（住房总价上限）
+MAX_REASONABLE_RENT_PRICE = 1_000_000   # 1,000,000 元/月（租金上限）
+
+# 断点保存间隔：每完成多少条新 trade 保存一次（默认 1 = 每条都保存）
+# 设为更大值（如 4 = 每区保存一次）可减少磁盘 I/O
+CHECKPOINT_SAVE_INTERVAL = 1
 
 
 # ── ANSI Color Helpers ────────────────────────────────────────────────────
@@ -153,8 +186,24 @@ def _result_path(data_month: str) -> Path:
     return DATA_DIR / f'result_{data_month}.json'
 
 
+def _city_result_path(data_month: str, city_name: str) -> Path:
+    """单个城市结果文件路径。"""
+    return DATA_DIR / f'result_{data_month}_{city_name}.json'
+
+
+def _build_target_format(city_name: str, city_data: dict, data_month: str) -> dict:
+    """将单个城市数据整理成目标格式。"""
+    return {
+        'update_time': datetime.now().isoformat(),
+        'data_month': data_month,
+        'source': 'creprice.cn',
+        'city': city_name,
+        'city_data': city_data,
+    }
+
+
 def load_checkpoint(data_month: str) -> tuple[dict, dict]:
-    """加载断点文件和已有结果。
+    """加载断点文件和已有结果（优先合并单个城市结果。
 
     Returns:
         (checkpoint_dict, results_dict)
@@ -174,32 +223,55 @@ def load_checkpoint(data_month: str) -> tuple[dict, dict]:
         except (json.JSONDecodeError, OSError) as e:
             log_warn(f"断点文件损坏，忽略: {e}")
 
-    if res_path.exists():
+    # 优先加载单个城市结果，如不存在则加载合并结果
+    loaded_from_single = False
+    for city_name in CITIES:
+        city_res_path = _city_result_path(data_month, city_name)
+        if city_res_path.exists():
+            try:
+                city_full = json.loads(city_res_path.read_text(encoding='utf-8'))
+                if 'city_data' in city_full:
+                    results[city_name] = city_full['city_data']
+                    loaded_from_single = True
+            except (json.JSONDecodeError, OSError) as e:
+                log_warn(f"城市 {city_name} 结果文件损坏，忽略: {e}")
+
+    if not loaded_from_single and res_path.exists():
         try:
             results = json.loads(res_path.read_text(encoding='utf-8'))
             city_count = len(results)
             dist_count = sum(len(c.get('districts', {})) for c in results.values())
             log_info(f"加载已有数据: {city_count} 城市, {dist_count} 区县")
         except (json.JSONDecodeError, OSError) as e:
-            log_warn(f"结果文件损坏，忽略: {e}")
+            log_warn(f"合并结果文件损坏，忽略: {e}")
 
     return checkpoint, results
 
 
-def save_checkpoint(data_month: str, checkpoint: dict, results: dict) -> None:
-    """保存断点和中间结果到 data/info/。"""
+def save_checkpoint(data_month: str, checkpoint: dict, results: dict, city_name: str | None = None) -> None:
+    """保存断点、合并结果，如指定城市，同时保存该城市的单独结果。"""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     cp_path = _checkpoint_path(data_month)
     res_path = _result_path(data_month)
 
     try:
+        # 保存断点
         cp_path.write_text(
             json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding='utf-8'
         )
+        # 保存合并结果
         res_path.write_text(
             json.dumps(results, ensure_ascii=False, indent=2), encoding='utf-8'
         )
+        # 如指定城市，同时保存单独结果（目标格式）
+        if city_name and city_name in results:
+            city_res_path = _city_result_path(data_month, city_name)
+            target_format = _build_target_format(city_name, results[city_name], data_month)
+            city_res_path.write_text(
+                json.dumps(target_format, ensure_ascii=False, indent=2), encoding='utf-8'
+            )
+            log_info(f"保存城市 {city_name} 单独结果: {city_res_path.name}")
     except OSError as e:
         log_warn(f"保存断点失败: {e}")
 
@@ -256,7 +328,7 @@ def extract_province(html: str, city_name: str) -> str | None:
 
 
 def parse_overview(html: str) -> dict | None:
-    """从页面 HTML 概况区域提取数据。"""
+    """从页面 HTML 概况区域提取数据，包含合理性校验。"""
     gk_match = re.search(
         r'<div\s+class="[^"]*gk[^"]*"[^>]*>[\s\S]*?<div\s+class="data"[^>]*>([\s\S]*?)</div>',
         html, re.DOTALL,
@@ -276,7 +348,12 @@ def parse_overview(html: str) -> dict | None:
     m = re.search(r'([\d,]+(?:\.\d+)?)\s*(万元/㎡|元/㎡|元/月/㎡)', text)
     if m:
         try:
-            result['unit_price'] = float(m.group(1).replace(',', ''))
+            unit_price = float(m.group(1).replace(',', ''))
+            if 0 < unit_price <= MAX_REASONABLE_UNIT_PRICE:
+                result['unit_price'] = unit_price
+            else:
+                log_warn(f"单价异常: {unit_price}，标记为无效")
+                result['unit_price'] = None
         except ValueError:
             result['unit_price'] = None
         result['unit_price_display'] = f"{m.group(1)} {m.group(2)}"
@@ -295,7 +372,12 @@ def parse_overview(html: str) -> dict | None:
     m = re.search(r'平均总价[：:]\s*([\d,]+(?:\.\d+)?)\s*万元', text)
     if m:
         try:
-            result['total_price'] = float(m.group(1).replace(',', ''))
+            total_price = float(m.group(1).replace(',', ''))
+            if 0 < total_price <= MAX_REASONABLE_TOTAL_PRICE:
+                result['total_price'] = total_price
+            else:
+                log_warn(f"总价异常: {total_price} 万元，标记为无效")
+                result['total_price'] = None
         except ValueError:
             result['total_price'] = None
         result['total_price_display'] = f"{m.group(1)} 万元"
@@ -303,7 +385,12 @@ def parse_overview(html: str) -> dict | None:
         m = re.search(r'平均总价[：:]\s*([\d,]+(?:\.\d+)?)\s*元/月', text)
         if m:
             try:
-                result['total_price'] = float(m.group(1).replace(',', ''))
+                total_price = float(m.group(1).replace(',', ''))
+                if 0 < total_price <= MAX_REASONABLE_RENT_PRICE:
+                    result['total_price'] = total_price
+                else:
+                    log_warn(f"月租金异常: {total_price} 元/月，标记为无效")
+                    result['total_price'] = None
             except ValueError:
                 result['total_price'] = None
             result['total_price_display'] = f"{m.group(1)} 元/月"
@@ -328,25 +415,33 @@ def stealth_init_script() -> str:
     """生成注入到浏览器的隐身脚本，在所有页面加载前执行。
 
     修复以下检测点:
-      1. navigator.webdriver = false
-      2. navigator.plugins 填充常见插件
-      3. navigator.languages 填充
-      4. chrome.runtime 填充
-      5. WebGL vendor/renderer 伪造
-      6. Permission API 伪装
-      7. 隐藏自动化相关的 CDP 特征
+      1.  navigator.webdriver = false
+      2.  navigator.plugins 填充常见插件
+      3.  navigator.languages 填充
+      4.  chrome.runtime 填充
+      5.  WebGL / WebGL2 vendor/renderer 伪造
+      6.  Canvas 指纹噪声注入
+      7.  WebRTC IP 泄露防护（SDP 候选剥离）
+      8.  Screen 属性与视口一致性
+      9.  hardwareConcurrency 随机
+      10. Device Memory 伪造
+      11. Network Connection API 伪造
+      12. Permission API 伪装
+      13. matchMedia 伪装
+      14. CDP / Playwright 标记清除
+      15. iframe 注入隔离
     """
     return """
-    // 1. navigator.webdriver — 最关键的检测点
+    /* ── 1. navigator.webdriver — 最关键的检测点 ── */
     Object.defineProperty(navigator, 'webdriver', {
         get: () => false,
         configurable: true,
     });
 
-    // 2. navigator.plugins — 填充 5 个常见插件
+    /* ── 2. navigator.plugins — 填充常见插件 ── */
     Object.defineProperty(navigator, 'plugins', {
         get: () => {
-            const plugins = [
+            var plugins = [
                 { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: '' },
                 { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
                 { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' },
@@ -359,16 +454,14 @@ def stealth_init_script() -> str:
         configurable: true,
     });
 
-    // 3. navigator.languages
+    /* ── 3. navigator.languages ── */
     Object.defineProperty(navigator, 'languages', {
         get: () => ['zh-CN', 'zh', 'en-US', 'en'],
         configurable: true,
     });
 
-    // 4. chrome.runtime
-    if (!window.chrome) {
-        window.chrome = {};
-    }
+    /* ── 4. chrome.runtime ── */
+    if (!window.chrome) { window.chrome = {}; }
     if (!window.chrome.runtime) {
         window.chrome.runtime = {
             connect: function() {},
@@ -376,36 +469,138 @@ def stealth_init_script() -> str:
         };
     }
 
-    // 5. WebGL 伪造
-    const getParameter = WebGLRenderingContext.prototype.getParameter;
-    WebGLRenderingContext.prototype.getParameter = function(parameter) {
-        // WebGL vendor
-        if (parameter === 37445) return 'Google Inc. (NVIDIA)';
-        // WebGL renderer
-        if (parameter === 37446) return 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0_0_0)';
-        return getParameter.call(this, parameter);
+    /* ── 5. WebGL / WebGL2 vendor/renderer 伪造 ── */
+    var UNMASKED_VENDOR_WEBGL = 37445;
+    var UNMASKED_RENDERER_WEBGL = 37446;
+
+    var getParamWebGL1 = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function(param) {
+        if (param === UNMASKED_VENDOR_WEBGL) return 'Google Inc. (NVIDIA)';
+        if (param === UNMASKED_RENDERER_WEBGL) return 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+        return getParamWebGL1.call(this, param);
     };
 
-    // 6. Permissions API
-    const originalQuery = window.Permission.prototype.query;
-    if (originalQuery) {
-        window.Permission.prototype.query = function(permission) {
-            return Promise.resolve({ state: 'granted', name: permission });
+    if (typeof WebGL2RenderingContext !== 'undefined') {
+        var getParamWebGL2 = WebGL2RenderingContext.prototype.getParameter;
+        WebGL2RenderingContext.prototype.getParameter = function(param) {
+            if (param === UNMASKED_VENDOR_WEBGL) return 'Google Inc. (NVIDIA)';
+            if (param === UNMASKED_RENDERER_WEBGL) return 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+            return getParamWebGL2.call(this, param);
         };
     }
 
-    // 7. 隐藏 CDP 特征
-    // @ts-ignore
-    const _Error = Error;
-    Object.defineProperty(_Error, 'prepareStackTrace', { value: '' });
+    /* ── 6. Canvas 指纹噪声 — 每次 toDataURL/toBlob 注入微小差异 ── */
+    (function() {
+        function injectNoise(canvas) {
+            try {
+                var ctx = canvas.getContext('2d');
+                if (ctx) {
+                    var prev = ctx.fillStyle;
+                    ctx.fillStyle = 'rgba(1,1,1,0.008)';
+                    ctx.fillRect(0, 0, 1, 1);
+                    ctx.fillStyle = prev;
+                }
+            } catch(e) {}
+        }
 
-    // 8. 伪造 mediaDevices / screen
+        var origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+        HTMLCanvasElement.prototype.toDataURL = function() {
+            injectNoise(this);
+            return origToDataURL.apply(this, arguments);
+        };
+
+        if (HTMLCanvasElement.prototype.toBlob) {
+            var origToBlob = HTMLCanvasElement.prototype.toBlob;
+            HTMLCanvasElement.prototype.toBlob = function() {
+                injectNoise(this);
+                return origToBlob.apply(this, arguments);
+            };
+        }
+
+        // 同时干扰 getImageData（有些指纹库用这个代替 toDataURL）
+        var origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+        CanvasRenderingContext2D.prototype.getImageData = function(sx, sy, sw, sh) {
+            var imageData = origGetImageData.call(this, sx, sy, sw, sh);
+            for (var i = 0; i < imageData.data.length; i += 16) {
+                imageData.data[i] ^= 1;  // 每 4 像素改 1 bit，视觉不可见
+            }
+            return imageData;
+        };
+    })();
+
+    /* ── 7. WebRTC IP 泄露防护 — 从 SDP 中剥离本地 IP 候选 ── */
+    (function() {
+        var OrigRTC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+        if (OrigRTC) {
+            window.RTCPeerConnection = function(config, constraints) {
+                var pc = new OrigRTC(config || {}, constraints || {});
+                var origCreateOffer = pc.createOffer.bind(pc);
+                var origCreateAnswer = pc.createAnswer.bind(pc);
+
+                function stripHostCandidates(sdp) {
+                    return sdp.replace(/a=candidate:.*typ host.*\\r\\n/g, '');
+                }
+
+                pc.createOffer = function(opts) {
+                    return origCreateOffer(opts || undefined).then(function(offer) {
+                        offer.sdp = stripHostCandidates(offer.sdp);
+                        return offer;
+                    });
+                };
+                pc.createAnswer = function(opts) {
+                    return origCreateAnswer(opts || undefined).then(function(answer) {
+                        answer.sdp = stripHostCandidates(answer.sdp);
+                        return answer;
+                    });
+                };
+                return pc;
+            };
+            window.RTCPeerConnection.prototype = OrigRTC.prototype;
+        }
+    })();
+
+    /* ── 8. Screen 属性一致性 — 与视口保持一致 ── */
+    Object.defineProperty(screen, 'width',       { get: () => window.outerWidth || window.innerWidth, configurable: true });
+    Object.defineProperty(screen, 'height',      { get: () => window.outerHeight || window.innerHeight, configurable: true });
+    Object.defineProperty(screen, 'availWidth',  { get: () => screen.width, configurable: true });
+    Object.defineProperty(screen, 'availHeight', { get: () => screen.height - 40, configurable: true });
+    Object.defineProperty(screen, 'colorDepth',  { get: () => 24, configurable: true });
+    Object.defineProperty(screen, 'pixelDepth',  { get: () => 24, configurable: true });
+
+    /* ── 9. hardwareConcurrency 随机 ── */
     Object.defineProperty(navigator, 'hardwareConcurrency', {
         get: () => [4, 8, 12, 16][Math.floor(Math.random() * 4)],
         configurable: true,
     });
 
-    // 9. prefers-color-scheme
+    /* ── 10. Device Memory ── */
+    Object.defineProperty(navigator, 'deviceMemory', {
+        get: () => 8,
+        configurable: true,
+    });
+
+    /* ── 11. Network Connection API ── */
+    Object.defineProperty(navigator, 'connection', {
+        get: () => ({
+            effectiveType: '4g',
+            rtt: 50,
+            downlink: 10,
+            saveData: false,
+            addEventListener: function() {},
+            removeEventListener: function() {},
+        }),
+        configurable: true,
+    });
+
+    /* ── 12. Permission API ── */
+    var origPermissionsQuery = window.Permissions && window.Permissions.prototype.query;
+    if (origPermissionsQuery) {
+        window.Permissions.prototype.query = function(permission) {
+            return Promise.resolve({ state: 'granted', name: permission.name || permission });
+        };
+    }
+
+    /* ── 13. matchMedia 伪装 ── */
     Object.defineProperty(window, 'matchMedia', {
         value: (query) => ({
             matches: false,
@@ -413,28 +608,87 @@ def stealth_init_script() -> str:
             addListener: () => {},
             removeListener: () => {},
             addEventListener: () => {},
-            dispatchEvent: () => {},
+            removeEventListener: () => {},
+            dispatchEvent: () => false,
         }),
+        configurable: true,
     });
 
-    // 10. 隐藏自动化相关的 window 属性
-    delete window.__playwright_evaluation_script__;
+    /* ── 14. 清除 CDP / Playwright 自动化痕迹 ── */
+    var _Error = Error;
+    Object.defineProperty(_Error, 'prepareStackTrace', { value: '', configurable: true });
+
+    try { delete window.__playwright_evaluation_script__; } catch(e) {}
+    try { delete window.__pw_manual; } catch(e) {}
+
+    /* ── 15. iframe 隔离 — 子 frame 也隐藏 webdriver 标志 ── */
+    (function() {
+        try {
+            var desc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentWindow');
+            if (desc && desc.get) {
+                Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+                    get: function() {
+                        var win = desc.get.call(this);
+                        try {
+                            Object.defineProperty(win.navigator, 'webdriver', {
+                                get: () => false, configurable: true,
+                            });
+                        } catch(e) {}
+                        return win;
+                    },
+                });
+            }
+        } catch(e) {}
+    })();
     """
 
 
 def human_delay(min_s: float = 1.0, max_s: float = 3.0) -> float:
     """返回一个随机的人类化延迟时间。"""
-    return min(max(random.uniform(min_s, max_s), min_s), max_s)
+    return random.uniform(min_s, max_s)
 
 
-def human_mouse_move(page, selector: str | None = None) -> None:
-    """模拟人类鼠标移动：在页面随机位置移动鼠标。"""
+def human_mouse_move(page) -> None:
+    """模拟人类鼠标移动：二次贝塞尔曲线路径，比直线更接近真实轨迹。"""
     viewport = page.viewport_size
-    if viewport:
-        x = random.randint(100, viewport['width'] - 100)
-        y = random.randint(100, viewport['height'] - 100)
-        page.mouse.move(x, y, steps=random.randint(5, 15))
-        time.sleep(human_delay(0.1, 0.5))
+    if not viewport:
+        return
+
+    w, h = viewport['width'], viewport['height']
+
+    # 起点（页面中部偏移区域）
+    sx = random.randint(int(w * 0.2), int(w * 0.8))
+    sy = random.randint(int(h * 0.2), int(h * 0.8))
+    # 终点
+    ex = random.randint(int(w * 0.1), int(w * 0.9))
+    ey = random.randint(int(h * 0.1), int(h * 0.9))
+    # 贝塞尔控制点（在起终点之间随机偏移）
+    cx = (sx + ex) / 2 + random.randint(-150, 150)
+    cy = (sy + ey) / 2 + random.randint(-150, 150)
+
+    steps = random.randint(15, 30)
+    for i in range(1, steps + 1):
+        t = i / steps
+        # 二次贝塞尔插值: B(t) = (1-t)²·P0 + 2(1-t)t·P1 + t²·P2
+        x = (1 - t) ** 2 * sx + 2 * (1 - t) * t * cx + t ** 2 * ex
+        y = (1 - t) ** 2 * sy + 2 * (1 - t) * t * cy + t ** 2 * ey
+        page.mouse.move(int(x), int(y))
+        # 模拟手部微颤 + 随机微停顿
+        time.sleep(random.uniform(0.008, 0.04))
+
+    time.sleep(human_delay(0.2, 0.8))
+
+
+# ── Page Lifecycle ─────────────────────────────────────────────────────────
+
+@contextmanager
+def open_page(context):
+    """创建页面上下文，确保使用后自动关闭，防止内存泄漏。"""
+    page = context.new_page()
+    try:
+        yield page
+    finally:
+        page.close()
 
 
 # ── Navigation ─────────────────────────────────────────────────────────────
@@ -465,52 +719,56 @@ def _handle_captcha(page, url: str, round_num: int) -> str | None:
 
 
 def navigate(page, url: str) -> str | None:
-    """导航到 URL，处理验证码和频率限制。返回 HTML 或 None。"""
-    try:
-        page.goto(url, wait_until='domcontentloaded', timeout=30000)
-    except PlaywrightTimeout:
-        return None
+    """导航到 URL，处理验证码和频率限制。
 
-    time.sleep(human_delay(2, 4))
-
-    # ── 验证码处理（多轮循环） ──
-    captcha_round = 0
-    while 'authcode.creprice.cn' in page.url:
-        captcha_round += 1
-        if captcha_round > MAX_CAPTCHA_ROUNDS:
-            log_fail(f"验证码已连续 {MAX_CAPTCHA_ROUNDS} 轮未通过，跳过此页")
-            return None
-
-        log_banner(f"[验证码] 第 {captcha_round}/{MAX_CAPTCHA_ROUNDS} 轮")
-        result = _handle_captcha(page, url, captcha_round)
-        if result is not None:
-            return result
-        # result is None → 仍在验证码页，继续循环
-
-    # ── 频率限制检查 ──
-    title = page.title()
-    if '抱歉' in title or '频繁' in title:
-        log_warn(f"触发频率限制，等待 {COOLDOWN_SEC}s 冷却...")
-        time.sleep(COOLDOWN_SEC)
+    使用循环而非递归，避免栈溢出。最多重试 MAX_NAV_DEPTH 次。
+    """
+    for attempt in range(1, MAX_NAV_DEPTH + 1):
         try:
             page.goto(url, wait_until='domcontentloaded', timeout=30000)
-            time.sleep(human_delay(2, 4))
-            # 验证码可能在冷却后也出现
-            if 'authcode.creprice.cn' in page.url:
-                return navigate(page, url)  # 递归处理
-            return page.content()
         except PlaywrightTimeout:
+            log_fail(f"页面加载超时 (第 {attempt} 次)")
             return None
 
-    # 模拟人类行为：随机滚动页面
-    try:
-        scroll_px = random.randint(200, 600)
-        page.evaluate(f'window.scrollTo(0, {scroll_px})')
-        time.sleep(human_delay(0.3, 1.0))
-    except Exception:
-        pass
+        time.sleep(human_delay(2, 4))
 
-    return page.content()
+        # ── 验证码处理（多轮循环） ──
+        captcha_round = 0
+        while 'authcode.creprice.cn' in page.url:
+            captcha_round += 1
+            if captcha_round > MAX_CAPTCHA_ROUNDS:
+                log_fail(f"验证码已连续 {MAX_CAPTCHA_ROUNDS} 轮未通过，跳过此页")
+                return None
+
+            log_banner(f"[验证码] 第 {captcha_round}/{MAX_CAPTCHA_ROUNDS} 轮")
+            result = _handle_captcha(page, url, captcha_round)
+            if result is not None:
+                return result
+
+        # ── 频率限制检查 ──
+        title = page.title()
+        if '抱歉' in title or '频繁' in title:
+            if attempt < MAX_NAV_DEPTH:
+                log_warn(f"触发频率限制 (第 {attempt} 次)，等待 {COOLDOWN_SEC}s 冷却...")
+                time.sleep(COOLDOWN_SEC)
+                continue  # 循环重试
+            else:
+                log_fail(f"频率限制重试已达 {MAX_NAV_DEPTH} 次，放弃此页")
+                return None
+
+        # ── 模拟人类行为：贝塞尔鼠标移动 + 多段随机滚动 ──
+        try:
+            human_mouse_move(page)
+            for _ in range(random.randint(1, 3)):
+                scroll_px = random.randint(200, 600)
+                page.evaluate(f'window.scrollBy(0, {scroll_px})')
+                time.sleep(human_delay(0.3, 1.0))
+        except Exception:
+            pass
+
+        return page.content()
+
+    return None  # 理论上不会到达
 
 
 # ── Main Scraper ──────────────────────────────────────────────────────────
@@ -522,31 +780,33 @@ def scrape_city(
     data_month: str,
     checkpoint: dict,
     all_results: dict,
-) -> dict:
-    """抓取一个城市的所有区县数据，支持断点续爬。"""
+) -> None:
+    """抓取一个城市的所有区县数据，支持断点续爬。
+
+    直接修改 all_results（引用传递），不返回值以避免引用混淆。
+    """
     seed_code = SEEDS.get(city_code)
     if not seed_code:
         log_fail(f"{city_name}: 无种子区，跳过")
-        return all_results.get(city_name, {})
-
-    # 检查该城市是否已全部完成
-    city_cp = checkpoint.get('completed', {}).get(city_name, {})
+        return
 
     # Phase 1: 发现区县
     seed_url = f"{BASE_URL}/district/{seed_code}.html?city={city_code}"
     log_info("发现区县中...")
 
-    html = navigate(context.new_page(), seed_url)
+    with open_page(context) as page:
+        html = navigate(page, seed_url)
+
     if not html:
         log_fail(f"{city_name}: 无法加载种子页")
-        return all_results.get(city_name, {})
+        return
 
     province = extract_province(html, city_name)
     districts = parse_districts(html)
 
     if not districts:
         log_fail(f"{city_name}: 未发现区县")
-        return all_results.get(city_name, {})
+        return
 
     log_info(f"发现 {C_BOLD}{len(districts)}{C_RESET} 个区 (省: {province or '?'})")
 
@@ -558,10 +818,12 @@ def scrape_city(
     total_tasks = len(districts) * len(TRADES)
     done_tasks = 0
     skipped_tasks = 0
+    failed_tasks = 0
     start_time = time.time()
+    save_counter = 0
 
     for dist_idx, (dist_code, dist_name) in enumerate(districts, 1):
-        # 计算已完成数
+        # 统计该区已完成的 trade 数
         completed_in_dist = sum(
             1 for t in TRADES
             if is_completed(checkpoint, city_name, dist_name, t['key'])
@@ -586,72 +848,75 @@ def scrape_city(
             flush=True,
         )
 
-        for trade in TRADES:
-            # 断点跳过
-            if is_completed(checkpoint, city_name, dist_name, trade['key']):
-                print(
-                    f"    {C_DIM}├─ {trade['label']:　<6} 跳过（已有数据）{C_RESET}",
-                    flush=True,
-                )
-                continue
+        # 每个区用一个 page 复用，减少创建/销毁开销
+        with open_page(context) as page:
+            for trade in TRADES:
+                # 断点跳过
+                if is_completed(checkpoint, city_name, dist_name, trade['key']):
+                    print(
+                        f"    {C_DIM}├─ {trade['label']:　<6} 跳过（已有数据）{C_RESET}",
+                        flush=True,
+                    )
+                    continue
 
-            url = f"{BASE_URL}/district/{dist_code}.html?city={city_code}"
-            if trade['param']:
-                url += f"&type={trade['param']}"
+                url = f"{BASE_URL}/district/{dist_code}.html?city={city_code}"
+                if trade['param']:
+                    url += f"&type={trade['param']}"
 
-            html = navigate(context.new_page(), url)
-            parsed = parse_overview(html) if html else None
-            entry[trade['key']] = parsed
+                html = navigate(page, url)
+                parsed = parse_overview(html) if html else None
+                entry[trade['key']] = parsed
 
-            if parsed:
-                log_ok(f"{dist_name} → {trade['label']}: "
-                       f"{parsed.get('unit_price_display', 'N/A')}")
-                mark_completed(checkpoint, city_name, dist_name, trade['key'])
-                done_tasks += 1
-            else:
-                log_fail(f"{dist_name} → {trade['label']}: 无数据")
-                done_tasks += 1
+                if parsed:
+                    log_ok(f"{dist_name} → {trade['label']}: "
+                           f"{parsed.get('unit_price_display', 'N/A')}")
+                    mark_completed(checkpoint, city_name, dist_name, trade['key'])
+                    done_tasks += 1
+                else:
+                    log_fail(f"{dist_name} → {trade['label']}: 无数据")
+                    failed_tasks += 1
 
-            # 每完成一个 trade 就保存断点
-            save_checkpoint(data_month, checkpoint, all_results)
+                save_counter += 1
+                if save_counter >= CHECKPOINT_SAVE_INTERVAL:
+                    save_counter = 0
+                    save_checkpoint(data_month, checkpoint, all_results, city_name)
 
-            # 页面间随机延迟
-            delay = human_delay(PAGE_DELAY_MIN, PAGE_DELAY_MAX)
-            elapsed = time.time() - start_time
-            remaining_tasks = total_tasks - done_tasks
-            if remaining_tasks > 0:
-                avg_per_task = elapsed / max(done_tasks, 1)
-                eta_sec = avg_per_task * remaining_tasks
-                eta_min = int(eta_sec // 60)
-                eta_sec_rem = int(eta_sec % 60)
-                log_info(
-                    f"延迟 {delay:.0f}s | "
-                    f"进度 {done_tasks}/{total_tasks} | "
-                    f"预计剩余 {eta_min}m{eta_sec_rem:02d}s"
-                )
-            else:
-                log_info(f"延迟 {delay:.0f}s | 进度 {done_tasks}/{total_tasks}")
+                # 页面间随机延迟 + ETA
+                delay = human_delay(PAGE_DELAY_MIN, PAGE_DELAY_MAX)
+                newly_done = done_tasks - skipped_tasks
+                remaining = total_tasks - done_tasks
+                if remaining > 0 and newly_done > 0:
+                    elapsed = time.time() - start_time
+                    eta_sec = (elapsed / newly_done) * remaining
+                    eta_min = int(eta_sec // 60)
+                    eta_sec_rem = int(eta_sec % 60)
+                    log_info(
+                        f"延迟 {delay:.0f}s | "
+                        f"进度 {done_tasks}/{total_tasks} | "
+                        f"预计剩余 {eta_min}m{eta_sec_rem:02d}s"
+                    )
+                else:
+                    log_info(f"延迟 {delay:.0f}s | 进度 {done_tasks}/{total_tasks}")
 
-            time.sleep(delay)
+                time.sleep(delay)
 
         city_data['districts'][dist_name] = entry
 
     all_results[city_name] = city_data
 
-    # 最终保存
-    save_checkpoint(data_month, checkpoint, all_results)
+    # 城市结束时最终保存
+    save_checkpoint(data_month, checkpoint, all_results, city_name)
 
     elapsed = time.time() - start_time
+    parts = []
+    if done_tasks - skipped_tasks > 0:
+        parts.append(f"{done_tasks - skipped_tasks} 新爬取")
     if skipped_tasks > 0:
-        log_ok(
-            f"{city_name} 完成 | "
-            f"{done_tasks - skipped_tasks} 新爬取, {skipped_tasks} 跳过 | "
-            f"耗时 {elapsed:.0f}s"
-        )
-    else:
-        log_ok(f"{city_name} 完成 | 耗时 {elapsed:.0f}s")
-
-    return city_data
+        parts.append(f"{skipped_tasks} 跳过")
+    if failed_tasks > 0:
+        parts.append(f"{failed_tasks} 失败")
+    summary = ', '.join(parts) if parts else str(done_tasks) + ' 条'
+    log_ok(f"{city_name} 完成 | {summary} | 耗时 {elapsed:.0f}s")
 
 
 def main():
@@ -696,7 +961,7 @@ def main():
 
     # ── Banner ──
     print()
-    log_banner(f"Creprice 隐身爬虫 v3 — 断点续爬")
+    log_banner(f"Creprice 隐身爬虫 v4 — 增强反检测 + 断点续爬")
     log_info(f"月份: {C_BOLD}{data_month}{C_RESET}")
     log_info(f"城市: {C_BOLD}{', '.join(cities.keys())}{C_RESET}")
     log_info(f"延迟: {PAGE_DELAY_MIN}-{PAGE_DELAY_MAX}s/页")
@@ -714,35 +979,39 @@ def main():
     total_cities = len(cities)
 
     with sync_playwright() as p:
-        # 使用 persistent context 保存 cookies（跨运行复用）
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(COOKIE_DIR),
-            headless=args.headless,
-            locale='zh-CN',
-            viewport={'width': 1920, 'height': 1080},
-            args=['--disable-blink-features=AutomationControlled'],
-            user_agent=random.choice(USER_AGENTS),
-        )
-
-        # 注入隐身脚本（在所有新页面加载前执行）
-        context.add_init_script(stealth_init_script())
-
         for city_name, city_code in cities.items():
             city_idx += 1
+
+            # 每个城市独立 context → UA + 视口轮换，同时保持 cookie 持久化
+            vp = random.choice(VIEWPORTS)
+            ua = random.choice(USER_AGENTS)
+
             log_divider('─')
             log(
                 f"  [{C_BOLD}{city_idx}/{total_cities}{C_RESET}] "
-                f"{C_BOLD}{city_name}{C_RESET} ({city_code})",
+                f"{C_BOLD}{city_name}{C_RESET} ({city_code}) "
+                f"{C_DIM}[{vp['width']}x{vp['height']}] [{ua[:42]}...]{C_RESET}",
                 C_WHITE,
             )
             log_divider('─')
 
-            result = scrape_city(
-                city_name, city_code, context,
-                data_month, checkpoint, cities_result,
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=str(COOKIE_DIR),
+                headless=args.headless,
+                locale='zh-CN',
+                viewport=vp,
+                args=['--disable-blink-features=AutomationControlled'],
+                user_agent=ua,
             )
-            if result:
-                cities_result[city_name] = result
+            context.add_init_script(stealth_init_script())
+
+            try:
+                scrape_city(
+                    city_name, city_code, context,
+                    data_month, checkpoint, cities_result,
+                )
+            finally:
+                context.close()
 
     elapsed = time.time() - start
     print()
@@ -764,7 +1033,7 @@ def main():
     log_info(f"有效数据: {C_BOLD}{filled}/{total}{C_RESET} ({100 * filled // max(total, 1)}%)")
 
     output = {
-        'update_time': data_month,
+        'update_time': datetime.now().isoformat(),
         'data_month': data_month,
         'source': 'creprice.cn',
         'cities': cities_result,
