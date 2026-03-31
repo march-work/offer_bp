@@ -1,5 +1,5 @@
 {
-  "update_time": "2026-03-30T14:03:23.468642",
+  "update_time": "2026-03-31T12:52:39.509904",
   "data_month": "2026-03",
   "source": "creprice.cn",
   "city": "上海",
@@ -329,7 +329,15 @@
           "sell_rent_ratio": null,
           "price_range_display": null
         },
-        "whole_rent": null,
+        "whole_rent": {
+          "unit_price": 75.79,
+          "unit_price_display": "75.79 元/月/㎡",
+          "mom_change": "-0.98%",
+          "total_price": 6077.0,
+          "total_price_display": "6,077 元/月",
+          "sell_rent_ratio": 60,
+          "price_range_display": null
+        },
         "shared_rent": {
           "unit_price": 98.66,
           "unit_price_display": "98.66 元/月/㎡",

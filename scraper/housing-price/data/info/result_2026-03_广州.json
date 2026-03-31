@@ -1,5 +1,5 @@
 {
-  "update_time": "2026-03-30T14:03:23.469194",
+  "update_time": "2026-03-31T12:52:39.511581",
   "data_month": "2026-03",
   "source": "creprice.cn",
   "city": "广州",
@@ -414,7 +414,15 @@
           "sell_rent_ratio": 52,
           "price_range_display": null
         },
-        "shared_rent": null
+        "shared_rent": {
+          "unit_price": 26.5,
+          "unit_price_display": "26.50 元/月/㎡",
+          "mom_change": "-5.79%",
+          "total_price": 978.0,
+          "total_price_display": "978 元/月",
+          "sell_rent_ratio": null,
+          "price_range_display": null
+        }
       },
       "高新区": {
         "secondhand": {

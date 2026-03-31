@@ -19,7 +19,7 @@ creprice_scraper.py
   - 持久化 cookie（跨运行复用）
   - IP 被封时自动冷却并重试
   - 断点续爬：已爬取数据自动保存到 data/info/，重启后跳过
-  - 代理支持：自动从快代理发现可用 IP，验证后使用；失效自动切换
+   - 代理支持：自动从天齐代理 API 获取付费 IP，验证后使用；失效自动切换
   - 断点续爬：已爬取数据自动保存到 data/info/，重启后跳过
 
 Usage:
@@ -139,8 +139,12 @@ CHECKPOINT_SAVE_INTERVAL = 1
 # 代理提醒间隔（秒）
 PROXY_REMIND_INTERVAL = 15 * 60  # 15 分钟
 
-# 免费代理网站
-PROXY_SOURCE_URL = 'https://www.kuaidaili.com/free/'
+# 付费代理 API（天齐代理）
+PROXY_SOURCE_URL = 'http://api.tianqiip.com/getip?secret=nrws9oawizktrccc&num=1&type=json&port=1&time=15&ys=1&cs=1&mr=1&sign=f3ade5ac5d10a4a56dd7952efc3648bb'
+
+# 天齐代理认证信息
+PROXY_USERNAME = 'march123'
+PROXY_PASSWORD = 'mc123456'
 
 
 # ── ANSI Color Helpers ────────────────────────────────────────────────────
@@ -163,15 +167,15 @@ def log(msg: str, color: str = C_RESET) -> None:
 
 
 def log_ok(msg: str) -> None:
-    log(f"  ✓ {msg}", C_GREEN)
+    log(f"  [OK] {msg}", C_GREEN)
 
 
 def log_fail(msg: str) -> None:
-    log(f"  ✗ {msg}", C_RED)
+    log(f"  [FAIL] {msg}", C_RED)
 
 
 def log_warn(msg: str) -> None:
-    log(f"  ⚠ {msg}", C_YELLOW)
+    log(f"  [WARN] {msg}", C_YELLOW)
 
 
 def log_info(msg: str) -> None:
@@ -209,12 +213,12 @@ class ProxyFailedError(Exception):
 # ── Proxy Fetch / Verify ────────────────────────────────────────────────────
 
 def fetch_free_proxies(timeout: int = 10) -> list[str]:
-    """从快代理免费页面抓取代理 IP 列表。
+    """从天齐代理 API 获取付费代理 IP 列表。
 
-    使用 urllib 直接请求（不需要代理即可访问快代理），
-    解析表格提取 IP:PORT，返回 http://IP:PORT 格式列表。
+    使用 urllib 直接请求 API，解析 JSON 响应提取 IP:PORT，
+    返回 http://IP:PORT 格式列表。
     """
-    log_info(f"正在从 {C_BOLD}{PROXY_SOURCE_URL}{C_RESET} 获取免费代理...")
+    log_info(f"正在从天齐代理 API 获取付费代理...")
     proxies: list[str] = []
     try:
         req = urllib.request.Request(
@@ -222,23 +226,27 @@ def fetch_free_proxies(timeout: int = 10) -> list[str]:
             headers={'User-Agent': random.choice(USER_AGENTS)},
         )
         resp = urllib.request.urlopen(req, timeout=timeout)
-        html = resp.read().decode('utf-8', errors='ignore')
-
-        # 提取每行中的 IP 和 PORT
-        # 快代理 HTML 格式: <td data-title="IP">x.x.x.x</td> <td data-title="PORT">1234</td>
-        ip_pattern = re.compile(
-            r'(?:data-title="IP"[^>]*>|<td>)\s*(\d+\.\d+\.\d+\.\d+)\s*</td>'
-            r'.*?'
-            r'(?:data-title="PORT"[^>]*>|<td>)\s*(\d+)\s*</td>',
-            re.DOTALL,
-        )
-        for m in ip_pattern.finditer(html):
-            ip, port = m.group(1), m.group(2)
-            proxies.append(f"http://{ip}:{port}")
-
-        log_ok(f"获取到 {len(proxies)} 个代理 IP")
+        json_str = resp.read().decode('utf-8', errors='ignore')
+        
+        import json
+        data = json.loads(json_str)
+        
+        if data.get('code') == 1000:
+            proxy_list = data.get('data', [])
+            for proxy_info in proxy_list:
+                ip = proxy_info.get('ip')
+                port = proxy_info.get('port')
+                if ip and port:
+                    # 不带认证的代理格式（官方示例默认方式）
+                    proxy_url = f"http://{ip}:{port}"
+                    proxies.append(proxy_url)
+                    log_info(f"  获取到代理: {ip}:{port} ({proxy_info.get('city', '未知城市')}, {proxy_info.get('isp', '未知运营商')})")
+        
+        log_ok(f"共获取到 {len(proxies)} 个付费代理 IP")
     except Exception as e:
         log_fail(f"获取代理列表失败: {e}")
+        import traceback
+        traceback.print_exc()
 
     return proxies
 
@@ -317,7 +325,7 @@ class ProxyManager:
     # ── 内部方法 ──
 
     def _discover(self) -> str | None:
-        """从快代理获取并逐个验证，返回第一个可用的代理。"""
+        """从天齐代理 API 获取并逐个验证，返回第一个可用的代理。"""
         proxies = fetch_free_proxies()
         if not proxies:
             log_warn("未获取到任何代理，尝试直连")
@@ -1106,7 +1114,7 @@ def main():
     parser.add_argument('--city', type=str, default=None, help='只爬指定城市')
     parser.add_argument('--reset', action='store_true', help='清除断点，从头开始')
     parser.add_argument('--proxy', type=str, default=None,
-                        help='手动指定代理（如 http://IP:PORT），否则自动从快代理发现可用代理')
+                        help='手动指定代理（如 http://IP:PORT），否则自动从天齐代理 API 获取付费代理')
 
     args = parser.parse_args()
 
@@ -1146,7 +1154,7 @@ def main():
 
     # ── Banner ──
     print()
-    log_banner("Creprice 隐身爬虫 v5 — 自动代理发现 + 断点续爬")
+    log_banner("Creprice 隐身爬虫 v5 — 天齐付费代理 + 断点续爬")
     log_info(f"月份: {C_BOLD}{data_month}{C_RESET}")
     log_info(f"城市: {C_BOLD}{', '.join(cities.keys())}{C_RESET}")
     log_info(f"延迟: {PAGE_DELAY_MIN}-{PAGE_DELAY_MAX}s/页")
@@ -1155,11 +1163,38 @@ def main():
     log_info(f"模式: {'无头' if args.headless else '有头(推荐)'}")
     print()
 
-    # ── 初始化代理管理器 ──
-    proxy_manager = ProxyManager(initial_proxy=args.proxy)
+    # ── 网络模式选择 ──
+    use_proxy = True  # 默认使用代理
+    if args.proxy:
+        # 命令行手动指定了代理，直接使用
+        use_proxy = True
+        log_info(f"代理模式: 手动指定 {args.proxy}")
+    else:
+        # 交互式选择
+        print()
+        print(f"  {C_BOLD}请选择网络模式:{C_RESET}")
+        print(f"    {C_CYAN}[1]{C_RESET} 直连（本机 IP）")
+        print(f"    {C_CYAN}[2]{C_RESET} 代理（天齐付费代理）")
+        print()
+        while True:
+            choice = input(f"  {C_WHITE}请输入 1 或 2 [{C_BOLD}2{C_WHITE}]: {C_RESET}").strip()
+            if choice == '' or choice == '2':
+                use_proxy = True
+                break
+            elif choice == '1':
+                use_proxy = False
+                break
+            else:
+                log_warn("无效输入，请输入 1 或 2")
+        print()
 
-    # 启动 15 分钟提醒线程
-    proxy_manager.start_reminder()
+    # ── 初始化代理管理器 ──
+    if use_proxy:
+        proxy_manager = ProxyManager(initial_proxy=args.proxy)
+        proxy_manager.start_reminder()
+    else:
+        proxy_manager = ProxyManager(initial_proxy=None)
+        log_info("已选择直连模式，不使用代理")
 
     # 加载断点
     checkpoint, cities_result = load_checkpoint(data_month)
@@ -1174,14 +1209,17 @@ def main():
             for city_name, city_code in cities.items():
                 city_idx += 1
 
-                # ── 城市级别代理重试 ──
-                # 如果 --proxy 手动指定，先试手动代理；失败后也自动发现
-                proxy_retry = 0
-                max_proxy_retries = ProxyManager.MAX_PROXY_RETRIES
+                # ── 城市级别代理重试（仅代理模式） ──
+                if use_proxy:
+                    proxy_retry = 0
+                    max_proxy_retries = ProxyManager.MAX_PROXY_RETRIES
+                else:
+                    proxy_retry = 0
+                    max_proxy_retries = 1  # 直连模式不重试换代理
 
                 while proxy_retry < max_proxy_retries:
-                    # 获取当前代理（可能是手动的，也可能是自动发现的）
-                    proxy = proxy_manager.get_proxy()
+                    # 获取当前代理（直连模式返回 None）
+                    proxy = proxy_manager.get_proxy() if use_proxy else None
 
                     vp = random.choice(VIEWPORTS)
                     ua = random.choice(USER_AGENTS)
@@ -1220,13 +1258,13 @@ def main():
                         break  # 成功，跳出重试循环，进入下一个城市
                     except ProxyFailedError:
                         proxy_retry += 1
-                        proxy_manager.mark_failed()
-                        if proxy_retry < max_proxy_retries:
+                        if use_proxy:
+                            proxy_manager.mark_failed()
+                        if use_proxy and proxy_retry < max_proxy_retries:
                             log_info(f"正在自动发现新代理，重试城市 {city_name} "
                                      f"({proxy_retry}/{max_proxy_retries})")
                         else:
-                            log_fail(f"城市 {city_name} 代理重试 {max_proxy_retries} 次"
-                                      f"均失败，跳过该城市")
+                            log_fail(f"城市 {city_name} 失败，跳过")
                     finally:
                         context.close()
                         # 确保当前城市状态已保存（即使中途退出）

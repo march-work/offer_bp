@@ -1,5 +1,5 @@
 {
-  "update_time": "2026-03-30T14:03:23.467693",
+  "update_time": "2026-03-31T13:29:12.319193",
   "data_month": "2026-03",
   "source": "creprice.cn",
   "city": "北京",
@@ -56,7 +56,13 @@
           "sell_rent_ratio": 46,
           "price_range_display": "22,306 - 188,464 元/㎡"
         },
-        "newhome": null,
+        "newhome": {
+          "unit_price": 8.19,
+          "unit_price_display": "8.19 万元/㎡",
+          "mom_change": null,
+          "sell_rent_ratio": null,
+          "price_range_display": null
+        },
         "whole_rent": {
           "unit_price": 94.15,
           "unit_price_display": "94.15 元/月/㎡",

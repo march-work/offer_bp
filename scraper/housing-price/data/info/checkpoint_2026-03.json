@@ -10,7 +10,8 @@
       "朝阳区": [
         "secondhand",
         "whole_rent",
-        "shared_rent"
+        "shared_rent",
+        "newhome"
       ],
       "大兴区": [
         "secondhand",
@@ -156,7 +157,8 @@
       "闵行区": [
         "secondhand",
         "newhome",
-        "shared_rent"
+        "shared_rent",
+        "whole_rent"
       ],
       "浦东新区": [
         "secondhand",
@@ -308,7 +310,8 @@
       "增城区": [
         "secondhand",
         "newhome",
-        "whole_rent"
+        "whole_rent",
+        "shared_rent"
       ],
       "高新区": [
         "secondhand",
@@ -361,6 +364,333 @@
         "shared_rent"
       ],
       "龙华区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "罗湖区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "南山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "坪山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "盐田区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "南京": {
+      "高淳区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "鼓楼区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "江宁区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "建邺区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "溧水区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "六合区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "浦口区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "秦淮区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "栖霞区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "玄武区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "雨花台区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "南京经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "江宁经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "武汉": {
+      "蔡甸区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "东西湖区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "汉南区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "汉阳区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "洪山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "黄陂区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "江岸区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "江汉区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "江夏区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "硚口区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "青山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "武昌区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "新洲区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "临空港经开区": [
+        "secondhand",
+        "shared_rent"
+      ],
+      "武汉经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "东湖高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "杭州": {
+      "滨江区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "富阳区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "拱墅区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "临安区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "临平区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "钱塘区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "上城区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "萧山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "西湖区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "余杭区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "淳安县": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "建德市": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "桐庐县": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "杭州钱塘高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "杭州高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "富阳经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "杭州经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "余杭经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "萧山经开区": [
         "secondhand",
         "newhome",
         "whole_rent",
