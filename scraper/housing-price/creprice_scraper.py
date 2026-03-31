@@ -1229,6 +1229,16 @@ def main():
                                       f"均失败，跳过该城市")
                     finally:
                         context.close()
+                        # 确保当前城市状态已保存（即使中途退出）
+                        if city_name in cities_result:
+                            save_checkpoint(data_month, checkpoint, cities_result, city_name)
+    except KeyboardInterrupt:
+        print()
+        log_warn("Ctrl+C 退出，正在保存当前状态...")
+        # 保存所有已有城市的结果
+        for city_name in cities_result:
+            save_checkpoint(data_month, checkpoint, cities_result, city_name)
+        log_ok("状态已保存，下次运行断点续爬")
     finally:
         proxy_manager.stop_reminder()
 
