@@ -696,6 +696,219 @@
         "whole_rent",
         "shared_rent"
       ]
+    },
+    "成都": {
+      "成华区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "锦江区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "金牛区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "龙泉驿区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "郫都区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "青白江区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "青羊区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "双流区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "温江区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "武侯区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "新都区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "新津区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "崇州市": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "大邑县": [
+        "secondhand",
+        "newhome"
+      ],
+      "都江堰市": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "简阳市": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "金堂县": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "彭州市": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "蒲江县": [
+        "newhome"
+      ],
+      "邛崃市": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "合肥": {
+      "包河区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "滨湖新区": [
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "庐阳区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "蜀山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "新站区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "瑶海区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "政务区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "巢湖市": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "肥东县": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "肥西县": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "庐江县": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "长丰县": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
     }
   }
 }
