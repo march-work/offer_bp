@@ -1,5 +1,5 @@
 {
-  "update_time": "2026-03-31T15:00:36.841659",
+  "update_time": "2026-03-31T19:28:24.136445",
   "data_month": "2026-03",
   "source": "creprice.cn",
   "city": "武汉",
@@ -512,8 +512,22 @@
           "sell_rent_ratio": 28,
           "price_range_display": "5,340 - 16,519 元/㎡"
         },
-        "newhome": null,
-        "whole_rent": null,
+        "newhome": {
+          "unit_price": 1.07,
+          "unit_price_display": "1.07 万元/㎡",
+          "mom_change": null,
+          "sell_rent_ratio": null,
+          "price_range_display": null
+        },
+        "whole_rent": {
+          "unit_price": 19.45,
+          "unit_price_display": "19.45 元/月/㎡",
+          "mom_change": "-2.36%",
+          "total_price": 1803.0,
+          "total_price_display": "1,803 元/月",
+          "sell_rent_ratio": 36,
+          "price_range_display": null
+        },
         "shared_rent": {
           "unit_price": 43.7,
           "unit_price_display": "43.70 元/月/㎡",

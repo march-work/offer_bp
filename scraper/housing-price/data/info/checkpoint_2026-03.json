@@ -567,7 +567,9 @@
       ],
       "临空港经开区": [
         "secondhand",
-        "shared_rent"
+        "shared_rent",
+        "newhome",
+        "whole_rent"
       ],
       "武汉经开区": [
         "secondhand",
@@ -628,7 +630,8 @@
       "萧山区": [
         "secondhand",
         "newhome",
-        "whole_rent"
+        "whole_rent",
+        "shared_rent"
       ],
       "西湖区": [
         "secondhand",
@@ -835,7 +838,8 @@
       "滨湖新区": [
         "newhome",
         "whole_rent",
-        "shared_rent"
+        "shared_rent",
+        "secondhand"
       ],
       "高新区": [
         "secondhand",
@@ -904,6 +908,183 @@
         "shared_rent"
       ],
       "长丰县": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "西安": {
+      "灞桥区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "碑林区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "高陵区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "鄠邑区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "莲湖区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "临潼区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "未央区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "新城区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "阎良区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "雁塔区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "长安区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "蓝田县": [
+        "secondhand",
+        "newhome"
+      ],
+      "周至县": [
+        "secondhand",
+        "newhome"
+      ],
+      "高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "西安经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "陕西航空经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "陕西航天经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ]
+    },
+    "青岛": {
+      "城阳区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "黄岛区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "即墨区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "崂山区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "李沧区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "市北区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "市南区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "胶州市": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "莱西市": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "平度市": [
+        "secondhand",
+        "newhome",
+        "whole_rent"
+      ],
+      "高新区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "胶州经开区": [
+        "secondhand",
+        "newhome",
+        "whole_rent",
+        "shared_rent"
+      ],
+      "青岛经开区": [
         "secondhand",
         "newhome",
         "whole_rent",

@@ -1,5 +1,5 @@
 {
-  "update_time": "2026-03-31T15:48:10.979493",
+  "update_time": "2026-03-31T19:50:17.906761",
   "data_month": "2026-03",
   "source": "creprice.cn",
   "city": "合肥",
@@ -45,7 +45,17 @@
         }
       },
       "滨湖新区": {
-        "secondhand": null,
+        "secondhand": {
+          "unit_price": 1.63,
+          "unit_price_display": "1.63 万元/㎡",
+          "mom_change": "-9.94%",
+          "price_range_min": 9914,
+          "price_range_max": 28650,
+          "total_price": 200.0,
+          "total_price_display": "200 万元",
+          "sell_rent_ratio": 53,
+          "price_range_display": "9,914 - 28,650 元/㎡"
+        },
         "newhome": {
           "unit_price": 1.45,
           "unit_price_display": "1.45 万元/㎡",

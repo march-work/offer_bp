@@ -1,5 +1,5 @@
 {
-  "update_time": "2026-03-31T15:00:36.845093",
+  "update_time": "2026-03-31T19:28:40.186404",
   "data_month": "2026-03",
   "source": "creprice.cn",
   "city": "杭州",
@@ -300,7 +300,15 @@
           "sell_rent_ratio": 58,
           "price_range_display": null
         },
-        "shared_rent": null
+        "shared_rent": {
+          "unit_price": 58.24,
+          "unit_price_display": "58.24 元/月/㎡",
+          "mom_change": "+3.94%",
+          "total_price": 1461.0,
+          "total_price_display": "1,461 元/月",
+          "sell_rent_ratio": null,
+          "price_range_display": null
+        }
       },
       "西湖区": {
         "secondhand": {
