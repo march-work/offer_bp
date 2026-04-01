@@ -11,6 +11,10 @@ venv/
 # Node
 node_modules/
 
+# Next.js
+.next/
+out/
+
 # Browser auth / session data (never commit)
 scraper/housing-price/creprice_auth/
 
@@ -24,3 +28,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Testing
+coverage/
