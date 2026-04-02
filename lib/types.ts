@@ -1,33 +1,44 @@
 // ── 应届生评测器类型定义 ──
 
-export type Education = '专科及以下' | '本科' | '硕士' | '博士';
-export type SchoolLevel = string; // 根据 Education 联动
-
 export type CityTier = '超一线' | '一线' | '新一线' | '二线' | '三线及以下';
 export type Industry =
-  | 'AI/大模型'
-  | '半导体/芯片'
-  | '互联网/软件'
-  | '新能源/汽车'
-  | '金融/银行'
-  | '医疗/医药'
-  | '消费品/快消'
-  | '制造业'
-  | '教育/培训'
+  | '金融专业'
+  | '信息传输、软件和信息技术服务专业'
+  | '卫生和社会工作专业'
+  | '科学研究和技术服务专业'
+  | '教育专业'
+  | '文化、体育和娱乐专业'
+  | '制造专业'
+  | '建筑专业'
+  | '交通运输、仓储和邮政专业'
+  | '批发和零售专业'
+  | '租赁和商务服务专业'
+  | '电力、热力、燃气及水生产和供应专业'
+  | '水利、环境和公共设施管理专业'
+  | '公共管理、社会保障和社会组织专业'
+  | '房地产专业'
+  | '住宿和餐饮专业'
+  | '居民服务、修理和其他服务专业'
+  | '采矿专业'
+  | '农、林、牧、渔专业'
   | '其他';
 
 export interface FreshGradInput {
-  // 个人信息
-  education: Education;
-  schoolLevel: SchoolLevel;
-  targetCity: CityTier;
+  // 学历（三列独立选择）
+  bachelorLevel: string;     // 本科等级，必选
+  masterLevel: string;       // 硕士等级，'无' 表示未读
+  phdLevel: string;          // 博士等级，'无' 表示未读
+
+  // 目标
+  targetCity: string;
   targetIndustry: Industry;
 
-  // 薪资（TC 总包结构）
-  monthlyBaseSalary: number;   // 月薪基数（元/月）
-  bonusMonths: number;         // 年终奖月数（如 3 = 15薪）
-  annualStock: number;         // 股票/期权年化价值（万元/年）
-  monthlyAllowance: number;    // 月补贴总额（元/月）
+  // 薪资
+  monthlyBaseSalary: number;
+  monthsPerYear: number;
+  yearEndBonus: number;
+  annualStock: number;
+  monthlyAllowance: number;
 
   // 工时
   workDaysPerWeek: number;
@@ -43,7 +54,6 @@ export interface FreshGradInput {
   workEnvironment: string;
   leaderRelation: string;
   colleagueRelation: string;
-  cityLevel: CityTier;
   hasShuttle: boolean;
   hasCafeteria: boolean;
   cafeteriaQuality: string;
@@ -54,13 +64,16 @@ export interface FreshGradResult {
   rating: RatingInfo;
   workingDays: number;
   dailySalary: number;
-  totalCompensation: number;      // 年总包（元）
+  totalCompensation: number;
   expectedAnnualSalary: number;
   expectedDailySalary: number;
+  educationScore: number;
   envFactor: number;
   effectiveHours: number;
   officeRatio: number;
   shuttleFactor: number;
+  industryAvgSalary: number;
+  industryFactor: number;
 }
 
 export interface RatingInfo {

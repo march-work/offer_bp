@@ -7,20 +7,16 @@ import { calculateFreshGradScore, calculateTotalCompensation } from '@/lib/calcu
 import { FreshGradForm } from '@/components/fresh-graduate/FreshGradForm';
 import { FreshGradResult } from '@/components/fresh-graduate/FreshGradResult';
 import { LivingCostCard } from '@/components/fresh-graduate/LivingCostCard';
-import {
-  SCHOOL_OPTIONS,
-  EDUCATION_OPTIONS,
-  CITY_TIER_OPTIONS,
-  INDUSTRY_OPTIONS,
-} from '@/lib/constants';
 
 const DEFAULT_INPUT: FreshGradInput = {
-  education: '本科',
-  schoolLevel: '双非一本',
-  targetCity: '新一线',
-  targetIndustry: '互联网/软件',
+  bachelorLevel: '双非',
+  masterLevel: '无',
+  phdLevel: '无',
+  targetCity: '成都',
+  targetIndustry: '信息传输、软件和信息技术服务专业',
   monthlyBaseSalary: 0,
-  bonusMonths: 0,
+  monthsPerYear: 12,
+  yearEndBonus: 0,
   annualStock: 0,
   monthlyAllowance: 0,
   workDaysPerWeek: 5,
@@ -34,7 +30,6 @@ const DEFAULT_INPUT: FreshGradInput = {
   workEnvironment: '普通',
   leaderRelation: '中规中矩',
   colleagueRelation: '萍水相逢',
-  cityLevel: '新一线',
   hasShuttle: false,
   hasCafeteria: false,
   cafeteriaQuality: '普通',
@@ -47,20 +42,10 @@ export default function FreshGradPage() {
     (field: keyof FreshGradInput, value: FreshGradInput[keyof FreshGradInput]) => {
       setInput((prev) => {
         const next = { ...prev, [field]: value };
-
-        // 学历变化时联动学校等级
-        if (field === 'education') {
-          const options = SCHOOL_OPTIONS[value as string] ?? ['无'];
-          if (!options.includes(next.schoolLevel)) {
-            next.schoolLevel = options[0];
-          }
-        }
-
         // WFH 不能超过工作天数
         if (field === 'wfhDaysPerWeek' && (value as number) > next.workDaysPerWeek) {
           next.wfhDaysPerWeek = next.workDaysPerWeek;
         }
-
         return next;
       });
     },
@@ -77,18 +62,20 @@ export default function FreshGradPage() {
 
   const shareUrl = useMemo(() => {
     const params = new URLSearchParams();
-    params.set('edu', input.education);
-    params.set('sch', input.schoolLevel);
+    params.set('ba', input.bachelorLevel);
+    params.set('ma', input.masterLevel);
+    params.set('ph', input.phdLevel);
     params.set('city', input.targetCity);
     params.set('ind', input.targetIndustry);
     params.set('mb', String(input.monthlyBaseSalary));
-    params.set('bm', String(input.bonusMonths));
+    params.set('mp', String(input.monthsPerYear));
+    params.set('yb', String(input.yearEndBonus));
     params.set('st', String(input.annualStock));
-    params.set('ma', String(input.monthlyAllowance));
+    params.set('alw', String(input.monthlyAllowance));
     params.set('wd', String(input.workDaysPerWeek));
     params.set('wfh', String(input.wfhDaysPerWeek));
     params.set('al', String(input.annualLeave));
-    params.set('ph', String(input.publicHolidays));
+    params.set('phd', String(input.publicHolidays));
     params.set('ps', String(input.paidSickLeave));
     params.set('wh', String(input.dailyWorkHours));
     params.set('cm', String(input.commuteHours));
@@ -96,7 +83,6 @@ export default function FreshGradPage() {
     params.set('we', input.workEnvironment);
     params.set('lr', input.leaderRelation);
     params.set('cr', input.colleagueRelation);
-    params.set('cl', input.cityLevel);
     params.set('sh', String(input.hasShuttle ? 1 : 0));
     params.set('cf', String(input.hasCafeteria ? 1 : 0));
     params.set('cq', input.cafeteriaQuality ?? '普通');
@@ -135,12 +121,11 @@ export default function FreshGradPage() {
           <div className="lg:col-span-3">
             <FreshGradForm input={input} onChange={handleInputChange} />
           </div>
-
           {/* 右栏: 结果 */}
           <div className="lg:col-span-2">
             <div className="sticky top-16 space-y-4">
               <FreshGradResult result={result} />
-              <LivingCostCard cityTier={input.cityLevel} annualSalary={tc} />
+              <LivingCostCard cityName={input.targetCity} annualSalary={tc} />
             </div>
           </div>
         </div>

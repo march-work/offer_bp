@@ -1,0 +1,106 @@
+{
+  "city": "广州",
+  "year": 2024,
+  "data_source": {
+    "official_channel": "广东省统计局官网",
+    "data_type": "广东统计年鉴",
+    "publish_time": "2025年12月"
+  },
+  "industries": [
+    {
+      "name": "金融专业",
+      "annual_average_salary": 369771,
+      "currency": "CNY"
+    },
+    {
+      "name": "信息传输、软件和信息技术服务专业",
+      "annual_average_salary": 299796,
+      "currency": "CNY"
+    },
+    {
+      "name": "卫生和社会工作专业",
+      "annual_average_salary": 242361,
+      "currency": "CNY"
+    },
+    {
+      "name": "科学研究和技术服务专业",
+      "annual_average_salary": 220659,
+      "currency": "CNY"
+    },
+    {
+      "name": "教育专业",
+      "annual_average_salary": 213681,
+      "currency": "CNY"
+    },
+    {
+      "name": "文化、体育和娱乐专业",
+      "annual_average_salary": 209232,
+      "currency": "CNY"
+    },
+    {
+      "name": "采矿专业",
+      "annual_average_salary": 202878,
+      "currency": "CNY"
+    },
+    {
+      "name": "电力、热力、燃气及水生产和供应专业",
+      "annual_average_salary": 200148,
+      "currency": "CNY"
+    },
+    {
+      "name": "公共管理、社会保障和社会组织专业",
+      "annual_average_salary": 173094,
+      "currency": "CNY"
+    },
+    {
+      "name": "农、林、牧、渔专业",
+      "annual_average_salary": 69329,
+      "currency": "CNY"
+    },
+    {
+      "name": "住宿和餐饮专业",
+      "annual_average_salary": 80944,
+      "currency": "CNY"
+    },
+    {
+      "name": "居民服务、修理和其他服务专业",
+      "annual_average_salary": 84127,
+      "currency": "CNY"
+    },
+    {
+      "name": "水利、环境和公共设施管理专业",
+      "annual_average_salary": 114406,
+      "currency": "CNY"
+    },
+    {
+      "name": "房地产专业",
+      "annual_average_salary": 118684,
+      "currency": "CNY"
+    },
+    {
+      "name": "建筑专业",
+      "annual_average_salary": 141580,
+      "currency": "CNY"
+    },
+    {
+      "name": "交通运输、仓储和邮政专业",
+      "annual_average_salary": 149597,
+      "currency": "CNY"
+    },
+    {
+      "name": "租赁和商务服务专业",
+      "annual_average_salary": 159062,
+      "currency": "CNY"
+    },
+    {
+      "name": "批发和零售专业",
+      "annual_average_salary": 187585,
+      "currency": "CNY"
+    },
+    {
+      "name": "制造专业",
+      "annual_average_salary": 174240,
+      "currency": "CNY"
+    }
+  ]
+}

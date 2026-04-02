@@ -1,0 +1,494 @@
+{
+  "update_time": "2026-03-31T19:50:17.926009",
+  "data_month": "2026-03",
+  "source": "creprice.cn",
+  "province": null,
+  "districts": {
+    "城阳区": {
+      "secondhand": {
+        "unit_price": 1.17,
+        "unit_price_display": "1.17 万元/㎡",
+        "mom_change": "-7.01%",
+        "price_range_min": 6388,
+        "price_range_max": 23102,
+        "total_price": 160,
+        "total_price_display": "160 万元",
+        "sell_rent_ratio": 56,
+        "price_range_display": "6,388 - 23,102 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 1.16,
+        "unit_price_display": "1.16 万元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 16.29,
+        "unit_price_display": "16.29 元/月/㎡",
+        "mom_change": "+2.13%",
+        "total_price": 1596,
+        "total_price_display": "1,596 元/月",
+        "sell_rent_ratio": 60,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 32.08,
+        "unit_price_display": "32.08 元/月/㎡",
+        "mom_change": "-11.94%",
+        "total_price": 624,
+        "total_price_display": "624 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "黄岛区": {
+      "secondhand": {
+        "unit_price": 1.28,
+        "unit_price_display": "1.28 万元/㎡",
+        "mom_change": "-0.98%",
+        "price_range_min": 4810,
+        "price_range_max": 30992,
+        "total_price": 178,
+        "total_price_display": "178 万元",
+        "sell_rent_ratio": 60,
+        "price_range_display": "4,810 - 30,992 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 1.39,
+        "unit_price_display": "1.39 万元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 16.36,
+        "unit_price_display": "16.36 元/月/㎡",
+        "mom_change": "-1.09%",
+        "total_price": 1477,
+        "total_price_display": "1,477 元/月",
+        "sell_rent_ratio": 65,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 34.37,
+        "unit_price_display": "34.37 元/月/㎡",
+        "mom_change": "+19.51%",
+        "total_price": 782,
+        "total_price_display": "782 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "即墨区": {
+      "secondhand": {
+        "unit_price": 9280,
+        "unit_price_display": "9,280 元/㎡",
+        "mom_change": "-1.43%",
+        "price_range_min": 4026,
+        "price_range_max": 17870,
+        "total_price": 108,
+        "total_price_display": "108 万元",
+        "sell_rent_ratio": 65,
+        "price_range_display": "4,026 - 17,870 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 9484,
+        "unit_price_display": "9,484 元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 11.73,
+        "unit_price_display": "11.73 元/月/㎡",
+        "mom_change": "+1.47%",
+        "total_price": 1080,
+        "total_price_display": "1,080 元/月",
+        "sell_rent_ratio": 66,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 30.51,
+        "unit_price_display": "30.51 元/月/㎡",
+        "mom_change": null,
+        "total_price": 554,
+        "total_price_display": "554 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "崂山区": {
+      "secondhand": {
+        "unit_price": 4.08,
+        "unit_price_display": "4.08 万元/㎡",
+        "mom_change": "+2.04%",
+        "price_range_min": 15804,
+        "price_range_max": 91667,
+        "total_price": 707,
+        "total_price_display": "707 万元",
+        "sell_rent_ratio": 73,
+        "price_range_display": "15,804 - 91,667 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 4.39,
+        "unit_price_display": "4.39 万元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 38.92,
+        "unit_price_display": "38.92 元/月/㎡",
+        "mom_change": "+6.92%",
+        "total_price": 3806,
+        "total_price_display": "3,806 元/月",
+        "sell_rent_ratio": 87,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 55.94,
+        "unit_price_display": "55.94 元/月/㎡",
+        "mom_change": "+20.30%",
+        "total_price": 1183,
+        "total_price_display": "1,183 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "李沧区": {
+      "secondhand": {
+        "unit_price": 1.66,
+        "unit_price_display": "1.66 万元/㎡",
+        "mom_change": "+2.42%",
+        "price_range_min": 8618,
+        "price_range_max": 37838,
+        "total_price": 196,
+        "total_price_display": "196 万元",
+        "sell_rent_ratio": 49,
+        "price_range_display": "8,618 - 37,838 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 2.12,
+        "unit_price_display": "2.12 万元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 25.23,
+        "unit_price_display": "25.23 元/月/㎡",
+        "mom_change": "-0.71%",
+        "total_price": 1908,
+        "total_price_display": "1,908 元/月",
+        "sell_rent_ratio": 55,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 40.98,
+        "unit_price_display": "40.98 元/月/㎡",
+        "mom_change": "+14.34%",
+        "total_price": 1043,
+        "total_price_display": "1,043 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "市北区": {
+      "secondhand": {
+        "unit_price": 1.96,
+        "unit_price_display": "1.96 万元/㎡",
+        "mom_change": "+2.35%",
+        "price_range_min": 9820,
+        "price_range_max": 48412,
+        "total_price": 195,
+        "total_price_display": "195 万元",
+        "sell_rent_ratio": 47,
+        "price_range_display": "9,820 - 48,412 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 2.25,
+        "unit_price_display": "2.25 万元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 32.64,
+        "unit_price_display": "32.64 元/月/㎡",
+        "mom_change": "+2.22%",
+        "total_price": 2279,
+        "total_price_display": "2,279 元/月",
+        "sell_rent_ratio": 50,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 48.98,
+        "unit_price_display": "48.98 元/月/㎡",
+        "mom_change": "+17.29%",
+        "total_price": 999,
+        "total_price_display": "999 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "市南区": {
+      "secondhand": {
+        "unit_price": 3.09,
+        "unit_price_display": "3.09 万元/㎡",
+        "mom_change": "-0.35%",
+        "price_range_min": 11872,
+        "price_range_max": 63461,
+        "total_price": 393,
+        "total_price_display": "393 万元",
+        "sell_rent_ratio": 55,
+        "price_range_display": "11,872 - 63,461 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 3.6,
+        "unit_price_display": "3.60 万元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 44.91,
+        "unit_price_display": "44.91 元/月/㎡",
+        "mom_change": "+4.39%",
+        "total_price": 4947,
+        "total_price_display": "4,947 元/月",
+        "sell_rent_ratio": 57,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 52.55,
+        "unit_price_display": "52.55 元/月/㎡",
+        "mom_change": "+23.41%",
+        "total_price": 1109,
+        "total_price_display": "1,109 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "胶州市": {
+      "secondhand": {
+        "unit_price": 6323,
+        "unit_price_display": "6,323 元/㎡",
+        "mom_change": "+1.12%",
+        "price_range_min": 3409,
+        "price_range_max": 10601,
+        "total_price": 80,
+        "total_price_display": "80 万元",
+        "sell_rent_ratio": 50,
+        "price_range_display": "3,409 - 10,601 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 8924,
+        "unit_price_display": "8,924 元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 10.53,
+        "unit_price_display": "10.53 元/月/㎡",
+        "mom_change": "+0.29%",
+        "total_price": 983,
+        "total_price_display": "983 元/月",
+        "sell_rent_ratio": 50,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 25.03,
+        "unit_price_display": "25.03 元/月/㎡",
+        "mom_change": "-16.32%",
+        "total_price": 601,
+        "total_price_display": "601 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "莱西市": {
+      "secondhand": {
+        "unit_price": 5515,
+        "unit_price_display": "5,515 元/㎡",
+        "mom_change": "+1.30%",
+        "price_range_min": 2684,
+        "price_range_max": 14142,
+        "total_price": 63,
+        "total_price_display": "63 万元",
+        "sell_rent_ratio": 42,
+        "price_range_display": "2,684 - 14,142 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 7138,
+        "unit_price_display": "7,138 元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 11.03,
+        "unit_price_display": "11.03 元/月/㎡",
+        "mom_change": "-6.60%",
+        "total_price": 1033,
+        "total_price_display": "1,033 元/月",
+        "sell_rent_ratio": 42,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 13.26,
+        "unit_price_display": "13.26 元/月/㎡",
+        "mom_change": "0%",
+        "total_price": 990,
+        "total_price_display": "990 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "平度市": {
+      "secondhand": {
+        "unit_price": 6708,
+        "unit_price_display": "6,708 元/㎡",
+        "mom_change": "+4.94%",
+        "price_range_min": 5227,
+        "price_range_max": 9398,
+        "total_price": 73,
+        "total_price_display": "73 万元",
+        "sell_rent_ratio": 43,
+        "price_range_display": "5,227 - 9,398 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 6900,
+        "unit_price_display": "6,900 元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 12.86,
+        "unit_price_display": "12.86 元/月/㎡",
+        "mom_change": "+0.55%",
+        "total_price": 1226,
+        "total_price_display": "1,226 元/月",
+        "sell_rent_ratio": 43,
+        "price_range_display": null
+      },
+      "shared_rent": null
+    },
+    "高新区": {
+      "secondhand": {
+        "unit_price": 1.03,
+        "unit_price_display": "1.03 万元/㎡",
+        "mom_change": "-0.29%",
+        "price_range_min": 6388,
+        "price_range_max": 14644,
+        "total_price": 147,
+        "total_price_display": "147 万元",
+        "sell_rent_ratio": 54,
+        "price_range_display": "6,388 - 14,644 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 8600,
+        "unit_price_display": "8,600 元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 16.07,
+        "unit_price_display": "16.07 元/月/㎡",
+        "mom_change": "-1.53%",
+        "total_price": 1777,
+        "total_price_display": "1,777 元/月",
+        "sell_rent_ratio": 54,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 44.03,
+        "unit_price_display": "44.03 元/月/㎡",
+        "mom_change": "+17.88%",
+        "total_price": 554,
+        "total_price_display": "554 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "胶州经开区": {
+      "secondhand": {
+        "unit_price": 6415,
+        "unit_price_display": "6,415 元/㎡",
+        "mom_change": "+0.31%",
+        "price_range_min": 3409,
+        "price_range_max": 10366,
+        "total_price": 85,
+        "total_price_display": "85 万元",
+        "sell_rent_ratio": 48,
+        "price_range_display": "3,409 - 10,366 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 8817,
+        "unit_price_display": "8,817 元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 10.97,
+        "unit_price_display": "10.97 元/月/㎡",
+        "mom_change": "+1.20%",
+        "total_price": 1080,
+        "total_price_display": "1,080 元/月",
+        "sell_rent_ratio": 49,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 26.86,
+        "unit_price_display": "26.86 元/月/㎡",
+        "mom_change": "-9.81%",
+        "total_price": 555,
+        "total_price_display": "555 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    },
+    "青岛经开区": {
+      "secondhand": {
+        "unit_price": 1.26,
+        "unit_price_display": "1.26 万元/㎡",
+        "mom_change": "-4.10%",
+        "price_range_min": 7093,
+        "price_range_max": 29624,
+        "total_price": 154,
+        "total_price_display": "154 万元",
+        "sell_rent_ratio": 49,
+        "price_range_display": "7,093 - 29,624 元/㎡"
+      },
+      "newhome": {
+        "unit_price": 1.55,
+        "unit_price_display": "1.55 万元/㎡",
+        "mom_change": null,
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      },
+      "whole_rent": {
+        "unit_price": 19.42,
+        "unit_price_display": "19.42 元/月/㎡",
+        "mom_change": "-1.27%",
+        "total_price": 1666,
+        "total_price_display": "1,666 元/月",
+        "sell_rent_ratio": 54,
+        "price_range_display": null
+      },
+      "shared_rent": {
+        "unit_price": 36.52,
+        "unit_price_display": "36.52 元/月/㎡",
+        "mom_change": "+22.72%",
+        "total_price": 802,
+        "total_price_display": "802 元/月",
+        "sell_rent_ratio": null,
+        "price_range_display": null
+      }
+    }
+  }
+}

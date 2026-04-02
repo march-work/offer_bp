@@ -2,22 +2,22 @@
 
 import type { FreshGradInput } from '@/lib/types';
 import {
-  SCHOOL_OPTIONS,
-  EDUCATION_OPTIONS,
-  CITY_TIER_OPTIONS,
+  BACHELOR_OPTIONS,
+  MASTER_OPTIONS,
+  PHD_OPTIONS,
+  CITY_OPTIONS,
   INDUSTRY_OPTIONS,
   WORK_ENV_OPTIONS,
   LEADER_OPTIONS,
   COLLEAGUE_OPTIONS,
   CAFETERIA_OPTIONS,
+  MONTHS_PER_YEAR_OPTIONS,
+  ALLOWANCE_OPTIONS,
   WORK_DAYS_OPTIONS,
   WFH_DAYS_OPTIONS,
   DAILY_HOURS_OPTIONS,
   COMMUTE_HOURS_OPTIONS,
   REST_HOURS_OPTIONS,
-  CITY_TIER_EXAMPLES,
-  BONUS_MONTHS_OPTIONS,
-  ALLOWANCE_OPTIONS,
 } from '@/lib/constants';
 import { calculateTotalCompensation } from '@/lib/calculate';
 
@@ -27,31 +27,29 @@ interface Props {
 }
 
 export function FreshGradForm({ input, onChange }: Props) {
-  const schoolOptions = SCHOOL_OPTIONS[input.education] ?? ['无'];
-
   return (
     <div className="space-y-4">
-      {/* ── 个人信息 ── */}
-      <FormSection title="个人信息" icon="👤">
-        <SelectField
-          label="学历"
-          value={input.education}
-          options={EDUCATION_OPTIONS}
-          onChange={(v) => onChange('education', v)}
+      {/* ── 学历 ── */}
+      <FormSection title="学历" icon="🎓">
+        <EducationSelector
+          bachelor={input.bachelorLevel}
+          master={input.masterLevel}
+          phd={input.phdLevel}
+          onChange={(b, m, p) => {
+            onChange('bachelorLevel', b);
+            onChange('masterLevel', m);
+            onChange('phdLevel', p);
+          }}
         />
-        <SelectField
-          label="学校等级"
-          value={input.schoolLevel}
-          options={schoolOptions}
-          onChange={(v) => onChange('schoolLevel', v)}
-          hint={input.education === '硕士' ? '请选择本科+硕士的学校组合' : undefined}
-        />
+      </FormSection>
+
+      {/* ── 城市 & 行业 ── */}
+      <FormSection title="目标" icon="🎯">
         <SelectField
           label="目标城市"
           value={input.targetCity}
-          options={CITY_TIER_OPTIONS}
+          options={CITY_OPTIONS}
           onChange={(v) => onChange('targetCity', v)}
-          hint={CITY_TIER_EXAMPLES[input.targetCity]}
         />
         <SelectField
           label="目标行业"
@@ -64,7 +62,7 @@ export function FreshGradForm({ input, onChange }: Props) {
       {/* ── 薪资 ── */}
       <FormSection title="Offer 薪资" icon="💰">
         <NumberField
-          label="月薪基数（元/月）"
+          label="月薪（元/月）"
           value={input.monthlyBaseSalary}
           onChange={(v) => onChange('monthlyBaseSalary', v)}
           min={0}
@@ -72,11 +70,19 @@ export function FreshGradForm({ input, onChange }: Props) {
           placeholder="如 18000"
         />
         <SelectField
-          label="年终奖月数"
-          value={input.bonusMonths}
-          options={BONUS_MONTHS_OPTIONS}
-          onChange={(v) => onChange('bonusMonths', v)}
-          hint={input.bonusMonths > 0 ? `${12 + input.bonusMonths}薪` : undefined}
+          label="一年发几个月"
+          value={input.monthsPerYear}
+          options={MONTHS_PER_YEAR_OPTIONS}
+          onChange={(v) => onChange('monthsPerYear', v)}
+          hint={`${input.monthsPerYear}薪`}
+        />
+        <NumberField
+          label="额外年终奖（元）"
+          value={input.yearEndBonus}
+          onChange={(v) => onChange('yearEndBonus', v)}
+          min={0}
+          step={1000}
+          placeholder="额外的年终奖金额，无则填 0"
         />
         <NumberField
           label="股票/期权（万元/年）"
@@ -87,7 +93,7 @@ export function FreshGradForm({ input, onChange }: Props) {
           placeholder="如 10，无则填 0"
         />
         <SelectField
-          label="月补贴总额（元/月）"
+          label="月补贴（元/月）"
           value={input.monthlyAllowance}
           options={ALLOWANCE_OPTIONS}
           onChange={(v) => onChange('monthlyAllowance', v)}
@@ -95,7 +101,7 @@ export function FreshGradForm({ input, onChange }: Props) {
         <TCPreview input={input} />
       </FormSection>
 
-      {/* ── 工作条件 ── */}
+      {/* ── 工时 ── */}
       <FormSection title="工作条件" icon="⏰">
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
           <SelectField
@@ -158,7 +164,7 @@ export function FreshGradForm({ input, onChange }: Props) {
         </div>
       </FormSection>
 
-      {/* ── 工作环境 ── */}
+      {/* ── 环境 ── */}
       <FormSection title="工作环境" icon="🏢">
         <SelectField
           label="办公环境"
@@ -179,11 +185,10 @@ export function FreshGradForm({ input, onChange }: Props) {
           onChange={(v) => onChange('colleagueRelation', v)}
         />
         <SelectField
-          label="城市生活成本"
-          value={input.cityLevel}
-          options={CITY_TIER_OPTIONS}
-          onChange={(v) => onChange('cityLevel', v)}
-          hint={CITY_TIER_EXAMPLES[input.cityLevel]}
+          label="食堂质量"
+          value={input.cafeteriaQuality ?? '普通'}
+          options={CAFETERIA_OPTIONS}
+          onChange={(v) => onChange('cafeteriaQuality', v)}
         />
         <div className="grid grid-cols-2 gap-x-4">
           <CheckboxField
@@ -197,30 +202,125 @@ export function FreshGradForm({ input, onChange }: Props) {
             onChange={(v) => onChange('hasCafeteria', v)}
           />
         </div>
-        {input.hasCafeteria && (
-          <SelectField
-            label="食堂质量"
-            value={input.cafeteriaQuality ?? '普通'}
-            options={CAFETERIA_OPTIONS}
-            onChange={(v) => onChange('cafeteriaQuality', v)}
-          />
-        )}
       </FormSection>
     </div>
   );
 }
 
-// ── 子组件 ──
-
-function FormSection({
-  title,
-  icon,
-  children,
+// ── 三列学历选择器 ──
+function EducationSelector({
+  bachelor,
+  master,
+  phd,
+  onChange,
 }: {
-  title: string;
-  icon: string;
-  children: React.ReactNode;
+  bachelor: string;
+  master: string;
+  phd: string;
+  onChange: (b: string, m: string, p: string) => void;
 }) {
+  const hasMaster = master !== '无' && master !== '直博';
+  const hasPhd = phd !== '无';
+  const isDirectPhD = (master === '无' || master === '直博') && phd !== '无';
+
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-2">
+        {/* 本科列 */}
+        <div>
+          <label className="block text-[10px] text-gray-400 mb-1 text-center">本科</label>
+          <div className="space-y-1">
+            {BACHELOR_OPTIONS.map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => onChange(opt.label, '无', '无')}
+                className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors ${
+                  bachelor === opt.label
+                    ? 'bg-blue-600 text-white font-medium'
+                    : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 硕士列 */}
+        <div>
+          <label className="block text-[10px] text-gray-400 mb-1 text-center">硕士</label>
+          <div className="space-y-1">
+            {MASTER_OPTIONS.map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => {
+                  if (opt.label === '直博') {
+                    onChange(bachelor, '无', '双非博士');
+                  } else {
+                    onChange(bachelor, opt.label, '无');
+                  }
+                }}
+                disabled={hasPhd && opt.label !== '直博'}
+                className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors disabled:opacity-40 ${
+                  master === opt.label || (opt.label === '直博' && isDirectPhD)
+                    ? 'bg-blue-600 text-white font-medium'
+                    : !hasMaster && opt.label !== '直博'
+                      ? 'bg-gray-100 text-gray-400'
+                      : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+              >
+                {opt.label}
+                {opt.label === '直博' && ' ↲'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 博士列 */}
+        <div>
+          <label className="block text-[10px] text-gray-400 mb-1 text-center">博士</label>
+          <div className="space-y-1">
+            {PHD_OPTIONS.map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => {
+                  if (!hasMaster) {
+                    onChange(bachelor, '无', opt.label);
+                  } else {
+                    onChange(bachelor, master, opt.label);
+                  }
+                }}
+                disabled={!hasMaster && master !== '直博' && master !== '无'}
+                className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors disabled:opacity-40 ${
+                  phd === opt.label
+                    ? 'bg-blue-600 text-white font-medium'
+                    : phd === '无'
+                      ? 'bg-gray-100 text-gray-400'
+                      : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      {isDirectPhD && (
+        <div className="text-center mt-2">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">
+            直博
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 通用子组件 ──
+function FormSection({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
       <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
@@ -263,9 +363,7 @@ function SelectField<T extends string | number>({
           onChange(parsed);
         }}
         disabled={disabled}
-        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                   disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
       >
         {options.map((opt) => (
           <option key={String(opt)} value={String(opt)}>
@@ -285,7 +383,6 @@ function NumberField({
   max,
   step,
   placeholder,
-  disabled,
 }: {
   label: string;
   value: number;
@@ -294,7 +391,6 @@ function NumberField({
   max?: number;
   step?: number;
   placeholder?: string;
-  disabled?: boolean;
 }) {
   return (
     <div>
@@ -302,47 +398,13 @@ function NumberField({
       <input
         type="number"
         value={value || ''}
-        onChange={(e) => {
-          const v = parseFloat(e.target.value);
-          if (!isNaN(v)) onChange(v);
-          else onChange(0);
-        }}
+        onChange={(e) => onChange(Number(e.target.value))}
         min={min}
         max={max}
-        step={step ?? 1}
+        step={step}
         placeholder={placeholder}
-        disabled={disabled}
-        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                   disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       />
-    </div>
-  );
-}
-
-function TCPreview({ input }: { input: FreshGradInput }) {
-  const tc = calculateTotalCompensation(input);
-  if (tc <= 0) return null;
-
-  const tcWan = (tc / 10000).toFixed(1);
-  const parts: string[] = [];
-  if (input.monthlyBaseSalary > 0) {
-    parts.push(`${(input.monthlyBaseSalary / 1000).toFixed(0)}k×${12 + input.bonusMonths}`);
-  }
-  if (input.annualStock > 0) {
-    parts.push(`股票${input.annualStock}万`);
-  }
-  if (input.monthlyAllowance > 0) {
-    parts.push(`补贴${(input.monthlyAllowance / 1000).toFixed(1)}k×12`);
-  }
-
-  return (
-    <div className="bg-blue-50 rounded-lg p-3 text-center">
-      <div className="text-xs text-gray-500 mb-1">预估年总包 (TC)</div>
-      <div className="text-lg font-semibold text-blue-600">{tcWan} 万</div>
-      <div className="text-[10px] text-gray-400 mt-0.5">
-        = {parts.join(' + ')}
-      </div>
     </div>
   );
 }
@@ -357,7 +419,7 @@ function CheckboxField({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 py-2 cursor-pointer">
+    <label className="flex items-center gap-2 cursor-pointer py-2">
       <input
         type="checkbox"
         checked={checked}
@@ -366,5 +428,18 @@ function CheckboxField({
       />
       <span className="text-sm text-gray-700">{label}</span>
     </label>
+  );
+}
+
+function TCPreview({ input }: { input: FreshGradInput }) {
+  const tc = calculateTotalCompensation(input);
+  if (tc <= 0) return null;
+  return (
+    <div className="bg-blue-50 rounded-lg px-4 py-3 text-center">
+      <div className="text-xs text-blue-500 mb-1">年总包 TC</div>
+      <div className="text-lg font-bold text-blue-700">
+        {(tc / 10000).toFixed(1)}万
+      </div>
+    </div>
   );
 }

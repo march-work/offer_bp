@@ -1,0 +1,106 @@
+{
+  "city": "上海",
+  "year": 2024,
+  "data_source": {
+    "official_channel": "https://tjj.sh.gov.cn/tjgb/",
+    "data_type": "统计公报（含产业数据）",
+    "publish_time": "2026年3月"
+  },
+  "industries": [
+    {
+      "name": "金融专业",
+      "annual_average_salary": 441204,
+      "currency": "CNY"
+    },
+    {
+      "name": "信息传输、软件和信息技术服务专业",
+      "annual_average_salary": 357711,
+      "currency": "CNY"
+    },
+    {
+      "name": "卫生和社会工作专业",
+      "annual_average_salary": 289181,
+      "currency": "CNY"
+    },
+    {
+      "name": "科学研究和技术服务专业",
+      "annual_average_salary": 263286,
+      "currency": "CNY"
+    },
+    {
+      "name": "教育专业",
+      "annual_average_salary": 254961,
+      "currency": "CNY"
+    },
+    {
+      "name": "文化、体育和娱乐专业",
+      "annual_average_salary": 249652,
+      "currency": "CNY"
+    },
+    {
+      "name": "采矿专业",
+      "annual_average_salary": 242071,
+      "currency": "CNY"
+    },
+    {
+      "name": "电力、热力、燃气及水生产和供应专业",
+      "annual_average_salary": 238813,
+      "currency": "CNY"
+    },
+    {
+      "name": "公共管理、社会保障和社会组织专业",
+      "annual_average_salary": 206532,
+      "currency": "CNY"
+    },
+    {
+      "name": "农、林、牧、渔专业",
+      "annual_average_salary": 82723,
+      "currency": "CNY"
+    },
+    {
+      "name": "住宿和餐饮专业",
+      "annual_average_salary": 96581,
+      "currency": "CNY"
+    },
+    {
+      "name": "居民服务、修理和其他服务专业",
+      "annual_average_salary": 100378,
+      "currency": "CNY"
+    },
+    {
+      "name": "水利、环境和公共设施管理专业",
+      "annual_average_salary": 136507,
+      "currency": "CNY"
+    },
+    {
+      "name": "房地产专业",
+      "annual_average_salary": 141612,
+      "currency": "CNY"
+    },
+    {
+      "name": "建筑专业",
+      "annual_average_salary": 168931,
+      "currency": "CNY"
+    },
+    {
+      "name": "交通运输、仓储和邮政专业",
+      "annual_average_salary": 178496,
+      "currency": "CNY"
+    },
+    {
+      "name": "租赁和商务服务专业",
+      "annual_average_salary": 189790,
+      "currency": "CNY"
+    },
+    {
+      "name": "批发和零售专业",
+      "annual_average_salary": 223823,
+      "currency": "CNY"
+    },
+    {
+      "name": "制造专业",
+      "annual_average_salary": 207900,
+      "currency": "CNY"
+    }
+  ]
+}

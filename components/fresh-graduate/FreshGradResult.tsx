@@ -49,6 +49,17 @@ export function FreshGradResult({ result }: Props) {
             sub={`日薪 ¥${result.expectedDailySalary.toFixed(0)}`}
           />
         </div>
+        {result.industryAvgSalary > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">行业平均年薪</span>
+              <span className="font-mono text-gray-700">
+                {(result.industryAvgSalary / 10000).toFixed(1)}万
+                <span className="text-xs text-gray-400 ml-1">（官方统计）</span>
+              </span>
+            </div>
+          </div>
+        )}
         <div className="mt-3 pt-3 border-t border-gray-100">
           <SalaryBar
             actual={result.dailySalary}

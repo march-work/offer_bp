@@ -2,7 +2,6 @@
 
 import {
   CITY_LIVING_DATA,
-  CITY_TIER_CITIES,
   calculateLivingCost,
 } from '../living-cost';
 
@@ -17,31 +16,10 @@ describe('CITY_LIVING_DATA', () => {
       expect(data.consumption).toBeGreaterThan(0);
       expect(data.consumption).toBeLessThan(data.income);
       expect(data.secondhandPrice).toBeGreaterThan(0);
+      expect(data.newhomePrice).toBeGreaterThan(0);
       expect(data.wholeRentPrice).toBeGreaterThan(0);
       expect(data.sharedRentPrice).toBeGreaterThan(0);
     }
-  });
-});
-
-describe('CITY_TIER_CITIES', () => {
-  it('maps 超一线 to 北京/上海/深圳', () => {
-    expect(CITY_TIER_CITIES['超一线']).toEqual(['北京', '上海', '深圳']);
-  });
-
-  it('maps 一线 to 广州/杭州', () => {
-    expect(CITY_TIER_CITIES['一线']).toEqual(['广州', '杭州']);
-  });
-
-  it('maps 新一线 to 4 cities', () => {
-    expect(CITY_TIER_CITIES['新一线']).toHaveLength(4);
-  });
-
-  it('maps 二线 to 合肥/青岛', () => {
-    expect(CITY_TIER_CITIES['二线']).toEqual(['合肥', '青岛']);
-  });
-
-  it('三线及以下 is empty', () => {
-    expect(CITY_TIER_CITIES['三线及以下']).toEqual([]);
   });
 });
 
@@ -59,44 +37,49 @@ describe('calculateLivingCost', () => {
 
     it('calculates whole rent monthly', () => {
       // 北京 wholeRentPrice=66.08, area=60
-      expect(result.wholeRentMonthly).toBe(Math.round(66.08 * 60));
-      expect(result.wholeRentMonthly).toBe(3965);
+      expect(result.whole.monthlyRent).toBe(Math.round(66.08 * 60));
+      expect(result.whole.monthlyRent).toBe(3965);
     });
 
     it('calculates shared rent monthly', () => {
       // 北京 sharedRentPrice=135.93, area=20
-      expect(result.sharedRentMonthly).toBe(Math.round(135.93 * 20));
-      expect(result.sharedRentMonthly).toBe(2719);
+      expect(result.shared.monthlyRent).toBe(Math.round(135.93 * 20));
+      expect(result.shared.monthlyRent).toBe(2719);
     });
 
     it('calculates whole rent income ratio', () => {
       const monthlyIncome = 300000 / 12;
-      expect(result.wholeRentIncomeRatio).toBeCloseTo(3965 / monthlyIncome, 3);
+      expect(result.whole.rentIncomeRatio).toBeCloseTo(3965 / monthlyIncome, 3);
     });
 
-    it('calculates total housing price', () => {
+    it('calculates total housing price (secondhand)', () => {
       // 北京 secondhandPrice=4.78, area=90
-      expect(result.totalPrice).toBeCloseTo(4.78 * 90, 1);
+      expect(result.secondhand.totalPrice).toBeCloseTo(4.78 * 90, 1);
     });
 
-    it('price-income ratio is reasonable for Beijing', () => {
+    it('calculates newhome total price', () => {
+      // 北京 newhomePrice=6.50, area=90
+      expect(result.newhome.totalPrice).toBeCloseTo(6.50 * 90, 1);
+    });
+
+    it('price-income ratio is reasonable for Beijing secondhand', () => {
       // 总价约 430 万 / 30 万年薪 ≈ 14.3
-      expect(result.priceIncomeRatio).toBeGreaterThan(10);
-      expect(result.priceIncomeRatio).toBeLessThan(20);
+      expect(result.secondhand.priceIncomeRatio).toBeGreaterThan(10);
+      expect(result.secondhand.priceIncomeRatio).toBeLessThan(20);
     });
 
     it('calculates down payment years', () => {
       // 首付约 129 万 / 30 万 ≈ 4.3 年
-      expect(result.downPaymentYears).toBeGreaterThan(3);
-      expect(result.downPaymentYears).toBeLessThan(8);
+      expect(result.secondhand.downPaymentYears).toBeGreaterThan(3);
+      expect(result.secondhand.downPaymentYears).toBeLessThan(8);
     });
 
     it('has monthly payment > 0', () => {
-      expect(result.monthlyPayment).toBeGreaterThan(0);
+      expect(result.secondhand.monthlyPayment).toBeGreaterThan(0);
     });
 
     it('mortgage income ratio is significant for Beijing', () => {
-      expect(result.mortgageIncomeRatio).toBeGreaterThan(0.3);
+      expect(result.secondhand.mortgageIncomeRatio).toBeGreaterThan(0.3);
     });
 
     it('living pressure index > 0', () => {
@@ -104,11 +87,11 @@ describe('calculateLivingCost', () => {
     });
 
     it('has rent rating', () => {
-      expect(result.rentRating).toBeTruthy();
+      expect(result.whole.rating).toBeTruthy();
     });
 
     it('has buy rating', () => {
-      expect(result.buyRating).toBeTruthy();
+      expect(result.secondhand.rating).toBeTruthy();
     });
 
     it('has pressure rating', () => {
@@ -126,12 +109,12 @@ describe('calculateLivingCost', () => {
 
     it('rent is cheaper than Beijing', () => {
       const bj = calculateLivingCost('北京', 300000)!;
-      expect(result.wholeRentMonthly).toBeLessThan(bj.wholeRentMonthly);
+      expect(result.whole.monthlyRent).toBeLessThan(bj.whole.monthlyRent);
     });
 
     it('housing price is lower', () => {
       const bj = calculateLivingCost('北京', 300000)!;
-      expect(result.totalPrice).toBeLessThan(bj.totalPrice);
+      expect(result.secondhand.totalPrice).toBeLessThan(bj.secondhand.totalPrice);
     });
 
     it('pressure index is lower than Beijing', () => {
@@ -160,7 +143,7 @@ describe('calculateLivingCost', () => {
         const result = calculateLivingCost(city, 200000);
         expect(result).not.toBeNull();
         expect(result!.livingPressureIndex).toBeGreaterThan(0);
-        expect(result!.rentRating).toBeTruthy();
+        expect(result!.whole.rating).toBeTruthy();
       }
     });
 

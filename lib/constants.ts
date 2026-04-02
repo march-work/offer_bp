@@ -1,41 +1,83 @@
 // ── 应届生评测器常量表 ──
-// 数据来源：docs/algorithms/fresh-grad-algorithm.md
 
-import type { RatingInfo } from './types';
+import type { CityTier, RatingInfo } from './types';
 
 // ── PPP 因子（中国大陆）──
 export const PPP_FACTOR_CHINA = 4.19;
 
 // ── 标准年工作日基准 ──
-export const STANDARD_WORKING_DAYS = 260; // 52 周 × 5 天
+export const STANDARD_WORKING_DAYS = 260;
 export const STANDARD_HOURS = 8;
 
-// ── 基础年薪表（万元）──
-// Key: `${education}|${schoolLevel}`
-export const BASE_ANNUAL_SALARY: Record<string, number> = {
-  // 专科及以下
-  '专科及以下|无': 6,
+// ── 三列学历选项及分值 ──
+// 分值 1-10，越高代表市场认可度越高
+export const BACHELOR_OPTIONS: { label: string; score: number }[] = [
+  { label: '专科', score: 1.0 },
+  { label: '专升本', score: 1.5 },
+  { label: '双非', score: 3.0 },
+  { label: '双一流', score: 4.0 },
+  { label: '211', score: 5.0 },
+  { label: '强势211', score: 6.0 },
+  { label: '985', score: 7.0 },
+  { label: '华五/C9', score: 8.0 },
+  { label: '清北', score: 9.5 },
+  { label: '海外QS100', score: 5.5 },
+  { label: '海外QS30', score: 7.5 },
+];
 
-  // 本科
-  '本科|二本三本': 8,
-  '本科|双非一本': 10,
-  '本科|985/211': 15,
-  '本科|C9/清北': 25,
+export const MASTER_OPTIONS: { label: string; score: number }[] = [
+  { label: '双非硕士', score: 2.0 },
+  { label: '211硕士', score: 4.0 },
+  { label: '985硕士', score: 6.0 },
+  { label: '华五/C9硕士', score: 7.5 },
+  { label: '清北硕士', score: 8.5 },
+  { label: '海外QS100', score: 5.0 },
+  { label: '海外QS30', score: 7.0 },
+  { label: '直博', score: 0 },
+];
 
-  // 硕士
-  '硕士|二本本科+二本硕士': 10,
-  '硕士|双非本科+双非硕士': 12,
-  '硕士|211本科+211硕士': 18,
-  '硕士|985本科+985硕士': 25,
-  '硕士|C9/清北': 35,
+export const PHD_OPTIONS: { label: string; score: number }[] = [
+  { label: '双非博士', score: 3.0 },
+  { label: '211博士', score: 5.0 },
+  { label: '985博士', score: 7.0 },
+  { label: '华五/C9博士', score: 8.5 },
+  { label: '清北博士', score: 9.5 },
+  { label: '海外QS100', score: 6.0 },
+  { label: '海外QS30', score: 8.0 },
+  { label: '顶尖Top20', score: 10.0 },
+];
 
-  // 博士
-  '博士|普通': 18,
-  '博士|985/QS50': 30,
-  '博士|C9/清北': 45,
+// ── 学历分值 → 期望年薪（万元）映射 ──
+// 算法：金本银硕铜博，按加权分值线性插值
+export const SALARY_SCORE_MAP: [number, number][] = [
+  [0.5, 4],
+  [1.0, 4.5],
+  [1.5, 6],
+  [2.0, 7],
+  [3.0, 8.5],
+  [4.0, 11],
+  [5.0, 14],
+  [6.0, 19],
+  [7.0, 25],
+  [8.0, 34],
+  [9.0, 47],
+  [10.0, 65],
+];
+
+// ── 城市相关 ──
+export const CITY_OPTIONS = [
+  '北京', '上海', '深圳', '广州', '杭州',
+  '南京', '成都', '武汉', '西安', '合肥', '青岛', '其他',
+] as const;
+
+export const CITY_TO_TIER: Record<string, CityTier> = {
+  '北京': '超一线', '上海': '超一线', '深圳': '超一线',
+  '广州': '一线', '杭州': '一线',
+  '南京': '新一线', '成都': '新一线', '武汉': '新一线', '西安': '新一线',
+  '合肥': '二线', '青岛': '二线',
+  '其他': '三线及以下',
 };
 
-// ── 城市薪资系数 ──
 export const CITY_SALARY_FACTOR: Record<string, number> = {
   '超一线': 1.30,
   '一线': 1.15,
@@ -44,27 +86,37 @@ export const CITY_SALARY_FACTOR: Record<string, number> = {
   '三线及以下': 0.70,
 };
 
-// ── 行业系数 ──
-export const INDUSTRY_FACTOR: Record<string, number> = {
-  'AI/大模型': 1.40,
-  '半导体/芯片': 1.30,
-  '互联网/软件': 1.20,
-  '新能源/汽车': 1.15,
-  '金融/银行': 1.10,
-  '医疗/医药': 1.05,
-  '消费品/快消': 1.00,
-  '制造业': 0.90,
-  '教育/培训': 0.80,
-  '其他': 0.85,
+// ── 城市综合存钱系数 ──
+// 数据来源：各市统计局《国民经济和社会发展统计公报》
+// 系数 = 全体居民人均可支配收入 / 全体居民人均消费支出
+// 反映该城市"赚得多、花得少"的综合挣钱存钱能力
+export const CITY_SAVINGS_RATIO: Record<string, number> = {
+  '北京': 1.76,   // 89090 / 50667 (2025年)
+  '上海': 1.68,   // 91987 / 54765 (2025年)
+  '深圳': 1.58,   // 81123 / 51415 (2024年)
+  '广州': 1.61,   // 城镇 83436 / 50496 (2024年)
+  '杭州': 1.44,   // 80017 / 55592 (2025年)
+  '南京': 1.69,   // 75180 / 44578 (2024年)
+  '成都': 1.44,   // 52024 / ~36200 (2024年)
+  '武汉': 1.51,   // 59732 / 39625 (2024年)
+  '西安': 1.59,   // 45082 / 28314 (2024年)
+  '合肥': 1.72,   // 55832 / 32442 (2024年)
+  '青岛': 1.64,   // 59922 / 36450 (2024年)
 };
 
-// ── 城市生活成本系数（环境系数子因子）──
-export const CITY_LIVING_COST: Record<string, number> = {
-  '超一线': 0.60,
-  '一线': 0.70,
-  '新一线': 0.80,
-  '二线': 0.90,
-  '三线及以下': 1.00,
+// 全国平均存钱系数：41314 / 28227 (2024年国家统计局)
+export const NATIONAL_SAVINGS_RATIO = 1.46;
+
+// ── 行业系数（仅用于无真实数据时的兜底）──
+export const INDUSTRY_FACTOR: Record<string, number> = {
+  '金融专业': 1.10,
+  '信息传输、软件和信息技术服务专业': 1.20,
+  '卫生和社会工作专业': 1.05,
+  '科学研究和技术服务专业': 1.15,
+  '教育专业': 0.80,
+  '文化、体育和娱乐专业': 0.95,
+  '制造专业': 0.90,
+  '其他': 0.85,
 };
 
 // ── 工作环境系数 ──
@@ -76,7 +128,6 @@ export const WORK_ENV_FACTOR: Record<string, number> = {
   '条件较差': 0.8,
 };
 
-// ── 领导关系系数 ──
 export const LEADER_FACTOR: Record<string, number> = {
   '善解人意': 1.2,
   '比较好': 1.1,
@@ -85,7 +136,6 @@ export const LEADER_FACTOR: Record<string, number> = {
   '简直噩梦': 0.8,
 };
 
-// ── 同事关系系数 ──
 export const COLLEAGUE_FACTOR: Record<string, number> = {
   '亲如一家': 1.2,
   '和和睦睦': 1.1,
@@ -94,7 +144,6 @@ export const COLLEAGUE_FACTOR: Record<string, number> = {
   '乌烟瘴气': 0.8,
 };
 
-// ── 食堂系数 ──
 export const CAFETERIA_FACTOR: Record<string, number> = {
   '丰富且便宜': 1.15,
   '不错': 1.1,
@@ -103,56 +152,39 @@ export const CAFETERIA_FACTOR: Record<string, number> = {
   '无食堂': 1.0,
 };
 
-// ── 班车系数 ──
-export const SHUTTLE_FACTOR_HAS = 0.3;
-export const SHUTTLE_FACTOR_NO = 1.0;
-
 // ── 评级体系 ──
 export const RATINGS: { max: number; info: RatingInfo }[] = [
-  {
-    max: 0.5,
-    info: { label: '大冤种', color: 'text-pink-800', colorHex: '#9d174d', description: '严重低于市场，快跑！' },
-  },
-  {
-    max: 0.7,
-    info: { label: '偏低', color: 'text-red-500', colorHex: '#ef4444', description: '明显低于期望' },
-  },
-  {
-    max: 0.9,
-    info: { label: '一般', color: 'text-orange-500', colorHex: '#f97316', description: '略低于期望，可以谈谈' },
-  },
-  {
-    max: 1.1,
-    info: { label: '合理', color: 'text-blue-500', colorHex: '#3b82f6', description: '符合市场水平' },
-  },
-  {
-    max: 1.3,
-    info: { label: '不错', color: 'text-green-500', colorHex: '#22c55e', description: '超出期望' },
-  },
-  {
-    max: 1.6,
-    info: { label: '很香', color: 'text-purple-500', colorHex: '#a855f7', description: '远超期望' },
-  },
-  {
-    max: Infinity,
-    info: { label: '天选 Offer', color: 'text-yellow-500', colorHex: '#eab308', description: '顶级 offer！' },
-  },
+  { max: 0.5, info: { label: '大冤种', color: 'text-pink-800', colorHex: '#9d174d', description: '严重低于市场，快跑！' } },
+  { max: 0.7, info: { label: '偏低', color: 'text-red-500', colorHex: '#ef4444', description: '明显低于期望' } },
+  { max: 0.9, info: { label: '一般', color: 'text-orange-500', colorHex: '#f97316', description: '略低于期望，可以谈谈' } },
+  { max: 1.1, info: { label: '合理', color: 'text-blue-500', colorHex: '#3b82f6', description: '符合市场水平' } },
+  { max: 1.3, info: { label: '不错', color: 'text-green-500', colorHex: '#22c55e', description: '超出期望' } },
+  { max: 1.6, info: { label: '很香', color: 'text-purple-500', colorHex: '#a855f7', description: '远超期望' } },
+  { max: Infinity, info: { label: '天选 Offer', color: 'text-yellow-500', colorHex: '#eab308', description: '顶级 offer！' } },
 ];
 
-// ── 学历联动：学校等级选项 ──
-export const SCHOOL_OPTIONS: Record<string, string[]> = {
-  '专科及以下': ['无'],
-  '本科': ['二本三本', '双非一本', '985/211', 'C9/清北'],
-  '硕士': ['二本本科+二本硕士', '双非本科+双非硕士', '211本科+211硕士', '985本科+985硕士', 'C9/清北'],
-  '博士': ['普通', '985/QS50', 'C9/清北'],
-};
-
 // ── 表单选项 ──
-export const EDUCATION_OPTIONS = ['专科及以下', '本科', '硕士', '博士'] as const;
-export const CITY_TIER_OPTIONS = ['超一线', '一线', '新一线', '二线', '三线及以下'] as const;
 export const INDUSTRY_OPTIONS = [
-  'AI/大模型', '半导体/芯片', '互联网/软件', '新能源/汽车',
-  '金融/银行', '医疗/医药', '消费品/快消', '制造业', '教育/培训', '其他',
+  '金融专业',
+  '信息传输、软件和信息技术服务专业',
+  '卫生和社会工作专业',
+  '科学研究和技术服务专业',
+  '教育专业',
+  '文化、体育和娱乐专业',
+  '制造专业',
+  '建筑专业',
+  '交通运输、仓储和邮政专业',
+  '批发和零售专业',
+  '租赁和商务服务专业',
+  '电力、热力、燃气及水生产和供应专业',
+  '水利、环境和公共设施管理专业',
+  '公共管理、社会保障和社会组织专业',
+  '房地产专业',
+  '住宿和餐饮专业',
+  '居民服务、修理和其他服务专业',
+  '采矿专业',
+  '农、林、牧、渔专业',
+  '其他',
 ] as const;
 
 export const WORK_ENV_OPTIONS = ['高端园区', 'CBD/甲级写字楼', '普通', '偏远/厂区', '条件较差'] as const;
@@ -160,21 +192,7 @@ export const LEADER_OPTIONS = ['善解人意', '比较好', '中规中矩', '比
 export const COLLEAGUE_OPTIONS = ['亲如一家', '和和睦睦', '萍水相逢', '勾勾搭角', '乌烟瘴气'] as const;
 export const CAFETERIA_OPTIONS = ['丰富且便宜', '不错', '普通', '较差'] as const;
 
-// ── 行业默认年终奖月数（用于期望薪资计算）──
-export const INDUSTRY_BONUS_MONTHS: Record<string, number> = {
-  'AI/大模型': 4,
-  '半导体/芯片': 3.5,
-  '互联网/软件': 3,
-  '新能源/汽车': 2.5,
-  '金融/银行': 3,
-  '医疗/医药': 2,
-  '消费品/快消': 2,
-  '制造业': 1.5,
-  '教育/培训': 1,
-  '其他': 1.5,
-};
-
-export const BONUS_MONTHS_OPTIONS = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6] as const;
+export const MONTHS_PER_YEAR_OPTIONS = [12, 13, 14, 15, 16, 18, 20, 24] as const;
 export const ALLOWANCE_OPTIONS = [0, 500, 800, 1000, 1500, 2000, 2500, 3000, 4000, 5000] as const;
 
 export const WORK_DAYS_OPTIONS = [4, 5, 6, 7] as const;
@@ -182,12 +200,3 @@ export const WFH_DAYS_OPTIONS = [0, 1, 2, 3, 4, 5] as const;
 export const DAILY_HOURS_OPTIONS = [6, 7, 8, 9, 10, 11, 12, 13, 14] as const;
 export const COMMUTE_HOURS_OPTIONS = [0, 0.5, 1, 1.5, 2, 2.5, 3] as const;
 export const REST_HOURS_OPTIONS = [0.5, 1, 1.5, 2, 2.5] as const;
-
-// ── 城市示例映射 ──
-export const CITY_TIER_EXAMPLES: Record<string, string> = {
-  '超一线': '北京、上海、深圳',
-  '一线': '广州、杭州',
-  '新一线': '成都、武汉、南京、西安',
-  '二线': '合肥、济南、福州',
-  '三线及以下': '其他城市',
-};

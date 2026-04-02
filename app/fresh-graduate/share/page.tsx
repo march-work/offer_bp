@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useRef, useCallback, useState } from 'react';
 import type { FreshGradInput } from '@/lib/types';
-import { calculateFreshGradScore, calculateTotalCompensation } from '@/lib/calculate';
+import { calculateFreshGradScore } from '@/lib/calculate';
 import { FreshGradShareCard } from '@/components/fresh-graduate/FreshGradShareCard';
 
 function ShareContent() {
@@ -12,18 +12,20 @@ function ShareContent() {
   const [downloading, setDownloading] = useState(false);
 
   const input = useMemo<FreshGradInput>(() => ({
-    education: (searchParams.get('edu') ?? '本科') as FreshGradInput['education'],
-    schoolLevel: searchParams.get('sch') ?? '双非一本',
-    targetCity: (searchParams.get('city') ?? '新一线') as FreshGradInput['targetCity'],
-    targetIndustry: (searchParams.get('ind') ?? '互联网/软件') as FreshGradInput['targetIndustry'],
+    bachelorLevel: searchParams.get('ba') ?? '双非',
+    masterLevel: searchParams.get('ma') ?? '无',
+    phdLevel: searchParams.get('ph') ?? '无',
+    targetCity: searchParams.get('city') ?? '成都',
+    targetIndustry: (searchParams.get('ind') ?? '信息传输、软件和信息技术服务专业') as FreshGradInput['targetIndustry'],
     monthlyBaseSalary: Number(searchParams.get('mb') ?? 0),
-    bonusMonths: Number(searchParams.get('bm') ?? 0),
+    monthsPerYear: Number(searchParams.get('mp') ?? 12),
+    yearEndBonus: Number(searchParams.get('yb') ?? 0),
     annualStock: Number(searchParams.get('st') ?? 0),
-    monthlyAllowance: Number(searchParams.get('ma') ?? 0),
+    monthlyAllowance: Number(searchParams.get('alw') ?? 0),
     workDaysPerWeek: Number(searchParams.get('wd') ?? 5),
     wfhDaysPerWeek: Number(searchParams.get('wfh') ?? 0),
     annualLeave: Number(searchParams.get('al') ?? 5),
-    publicHolidays: Number(searchParams.get('ph') ?? 13),
+    publicHolidays: Number(searchParams.get('phd') ?? 13),
     paidSickLeave: Number(searchParams.get('ps') ?? 0),
     dailyWorkHours: Number(searchParams.get('wh') ?? 9),
     commuteHours: Number(searchParams.get('cm') ?? 1.5),
@@ -31,7 +33,6 @@ function ShareContent() {
     workEnvironment: searchParams.get('we') ?? '普通',
     leaderRelation: searchParams.get('lr') ?? '中规中矩',
     colleagueRelation: searchParams.get('cr') ?? '萍水相逢',
-    cityLevel: (searchParams.get('cl') ?? '新一线') as FreshGradInput['cityLevel'],
     hasShuttle: searchParams.get('sh') === '1',
     hasCafeteria: searchParams.get('cf') === '1',
     cafeteriaQuality: searchParams.get('cq') ?? '普通',

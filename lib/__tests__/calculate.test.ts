@@ -1,7 +1,6 @@
 import {
   calculateWorkingDays,
   calculateDailySalary,
-  calculateExpectedDailySalary,
   calculateEnvFactor,
   calculateEffectiveHours,
   calculateOfficeRatio,
@@ -9,17 +8,21 @@ import {
   calculateTotalCompensation,
   calculateFreshGradScore,
   getRating,
+  calculateEducationScore,
+  scoreToExpectedAnnualWan,
 } from '../calculate';
 import type { FreshGradInput } from '../types';
 
 function createTestInput(overrides: Partial<FreshGradInput> = {}): FreshGradInput {
   return {
-    education: '本科',
-    schoolLevel: '双非一本',
-    targetCity: '新一线',
-    targetIndustry: '互联网/软件',
+    bachelorLevel: '双非',
+    masterLevel: '无',
+    phdLevel: '无',
+    targetCity: '成都',
+    targetIndustry: '信息传输、软件和信息技术服务专业',
     monthlyBaseSalary: 12500,
-    bonusMonths: 0,
+    monthsPerYear: 12,
+    yearEndBonus: 0,
     annualStock: 0,
     monthlyAllowance: 0,
     workDaysPerWeek: 5,
@@ -33,7 +36,6 @@ function createTestInput(overrides: Partial<FreshGradInput> = {}): FreshGradInpu
     workEnvironment: '普通',
     leaderRelation: '中规中矩',
     colleagueRelation: '萍水相逢',
-    cityLevel: '新一线',
     hasShuttle: false,
     hasCafeteria: false,
     cafeteriaQuality: '普通',
@@ -41,221 +43,250 @@ function createTestInput(overrides: Partial<FreshGradInput> = {}): FreshGradInpu
   };
 }
 
+// ── calculateTotalCompensation ──
 describe('calculateTotalCompensation', () => {
-  it('基础月薪×12 = TC', () => {
-    const input = createTestInput({ monthlyBaseSalary: 15000, bonusMonths: 0, annualStock: 0, monthlyAllowance: 0 });
-    expect(calculateTotalCompensation(input)).toBe(180000);
-  });
-
-  it('月薪×(12+3) = 15薪', () => {
-    const input = createTestInput({ monthlyBaseSalary: 15000, bonusMonths: 3, annualStock: 0, monthlyAllowance: 0 });
-    expect(calculateTotalCompensation(input)).toBe(225000);
-  });
-
-  it('含股票和补贴', () => {
+  it('calculates base TC correctly', () => {
     const input = createTestInput({
-      monthlyBaseSalary: 18000, bonusMonths: 3,
-      annualStock: 5, monthlyAllowance: 1500,
+      monthlyBaseSalary: 18000,
+      monthsPerYear: 14,
+      yearEndBonus: 20000,
+      annualStock: 5,
+      monthlyAllowance: 1000,
     });
-    // 18000×12 + 18000×3 + 50000 + 1500×12 = 216000 + 54000 + 50000 + 18000 = 338000
-    expect(calculateTotalCompensation(input)).toBe(338000);
+    expect(calculateTotalCompensation(input)).toBe(18000 * 14 + 20000 + 50000 + 1000 * 12);
   });
 
-  it('全部为零返回 0', () => {
+  it('handles zero values', () => {
     const input = createTestInput({
-      monthlyBaseSalary: 0, bonusMonths: 0, annualStock: 0, monthlyAllowance: 0,
+      monthlyBaseSalary: 10000,
+      monthsPerYear: 12,
+      yearEndBonus: 0,
+      annualStock: 0,
+      monthlyAllowance: 0,
     });
-    expect(calculateTotalCompensation(input)).toBe(0);
+    expect(calculateTotalCompensation(input)).toBe(120000);
   });
 });
 
+// ── calculateWorkingDays ──
 describe('calculateWorkingDays', () => {
-  it('文档示例: 5天/周, 5天年假, 13天法定假日, 3天病假', () => {
-    const input = createTestInput();
-    // 52 × 5 - (5 + 13 + 3 × 0.6) = 260 - 19.8 = 240.2
+  it('calculates standard 5-day week', () => {
+    const input = createTestInput({
+      workDaysPerWeek: 5,
+      annualLeave: 5,
+      publicHolidays: 13,
+      paidSickLeave: 3,
+    });
+    // 52 * 5 - (5 + 13 + 3 * 0.6) = 260 - 19.8 = 240.2
     expect(calculateWorkingDays(input)).toBeCloseTo(240.2, 1);
   });
 
-  it('无假期时 = 260天', () => {
+  it('handles 6-day work week', () => {
     const input = createTestInput({
-      annualLeave: 0, publicHolidays: 0, paidSickLeave: 0,
+      workDaysPerWeek: 6,
+      annualLeave: 5,
+      publicHolidays: 11,
+      paidSickLeave: 0,
     });
-    expect(calculateWorkingDays(input)).toBe(260);
+    // 52 * 6 - (5 + 11) = 312 - 16 = 296
+    expect(calculateWorkingDays(input)).toBe(296);
   });
 });
 
+// ── calculateDailySalary ──
 describe('calculateDailySalary', () => {
-  it('22万年薪, 240天', () => {
-    const daily = calculateDailySalary(220000, 240.2);
-    // (220000 × 4.19) / 240.2 ≈ 3837.6
-    expect(daily).toBeCloseTo(3837.6, 0);
+  it('calculates daily salary with PPP factor', () => {
+    const annual = 150000;
+    const days = 240;
+    // 150000 * 4.19 / 240
+    expect(calculateDailySalary(annual, days)).toBeCloseTo(150000 * 4.19 / 240, 1);
   });
 
-  it('零工作日返回 0', () => {
-    expect(calculateDailySalary(200000, 0)).toBe(0);
-  });
-});
-
-describe('calculateExpectedDailySalary', () => {
-  it('985本科 + 新一线 + 互联网', () => {
-    const result = calculateExpectedDailySalary('本科', '985/211', '新一线', '互联网/软件');
-    // 15万 × 1.0 × 1.2 = 18万
-    expect(result.expectedAnnual).toBeCloseTo(180000, -3);
-    expect(result.expectedDaily).toBeCloseTo(692.31, 0);
-  });
-
-  it('C9博士 + 超一线 + AI', () => {
-    const result = calculateExpectedDailySalary('博士', 'C9/清北', '超一线', 'AI/大模型');
-    // 45万 × 1.3 × 1.4 = 81.9万
-    expect(result.expectedAnnual).toBeCloseTo(819000, -3);
+  it('returns 0 for zero or negative days', () => {
+    expect(calculateDailySalary(100000, 0)).toBe(0);
+    expect(calculateDailySalary(100000, -10)).toBe(0);
   });
 });
 
-describe('calculateEnvFactor', () => {
-  it('默认环境 = 0.80', () => {
-    const input = createTestInput();
-    // 1.0 × 1.0 × 1.0 × 0.80 × 1.0 = 0.80
-    expect(calculateEnvFactor(input)).toBeCloseTo(0.80, 3);
+// ── calculateOfficeRatio ──
+describe('calculateOfficeRatio', () => {
+  it('returns 1 when no WFH', () => {
+    expect(calculateOfficeRatio(createTestInput({ wfhDaysPerWeek: 0, workDaysPerWeek: 5 }))).toBe(1);
   });
 
-  it('CBD + 善解人意 + 和睦 + 新一线 + 无食堂', () => {
-    const input = createTestInput({
-      workEnvironment: 'CBD/甲级写字楼',
-      leaderRelation: '善解人意',
-      colleagueRelation: '和和睦睦',
-      cityLevel: '新一线',
-      hasCafeteria: false,
-    });
-    // 1.1 × 1.2 × 1.1 × 0.80 × 1.0 = 1.1616
-    expect(calculateEnvFactor(input)).toBeCloseTo(1.1616, 3);
+  it('calculates ratio with 2 WFH days', () => {
+    expect(calculateOfficeRatio(createTestInput({ wfhDaysPerWeek: 2, workDaysPerWeek: 5 }))).toBeCloseTo(0.6);
   });
 
-  it('最差环境', () => {
-    const input = createTestInput({
-      workEnvironment: '条件较差',
-      leaderRelation: '简直噩梦',
-      colleagueRelation: '乌烟瘴气',
-      cityLevel: '超一线',
-      hasCafeteria: false,
-    });
-    // 0.8 × 0.8 × 0.8 × 0.60 × 1.0 = 0.3072
-    expect(calculateEnvFactor(input)).toBeCloseTo(0.3072, 3);
+  it('returns 1 for zero work days', () => {
+    expect(calculateOfficeRatio(createTestInput({ workDaysPerWeek: 0 }))).toBe(1);
   });
 });
 
+// ── getShuttleFactor ──
+describe('getShuttleFactor', () => {
+  it('returns 0.3 when has shuttle', () => {
+    expect(getShuttleFactor(true)).toBe(0.3);
+  });
+
+  it('returns 1.0 when no shuttle', () => {
+    expect(getShuttleFactor(false)).toBe(1.0);
+  });
+});
+
+// ── calculateEffectiveHours ──
 describe('calculateEffectiveHours', () => {
-  it('标准: 9h工时, 1.5h通勤, 全勤, 无班车', () => {
-    const input = createTestInput();
-    const officeRatio = calculateOfficeRatio(input);
-    expect(officeRatio).toBe(1.0);
-    const hours = calculateEffectiveHours(input, officeRatio, getShuttleFactor(false));
-    // 9 + 1.5*1.0*1.0 - 0.5*1.5 = 9 + 1.5 - 0.75 = 9.75
-    expect(hours).toBeCloseTo(9.75, 2);
-  });
-
-  it('WFH 2天减少通勤', () => {
+  it('calculates with full office and no shuttle', () => {
     const input = createTestInput({
-      wfhDaysPerWeek: 2,
-      dailyWorkHours: 10,
+      dailyWorkHours: 9,
+      commuteHours: 1.5,
+      restHours: 1.5,
     });
-    const officeRatio = calculateOfficeRatio(input);
-    expect(officeRatio).toBeCloseTo(0.6, 2);
-    const hours = calculateEffectiveHours(input, officeRatio, 1.0);
-    // 10 + 1.5 × 0.6 - 0.5 × 1.5 = 10 + 0.9 - 0.75 = 10.15
-    expect(hours).toBeCloseTo(10.15, 2);
+    // 9 + 1.5 * 1.0 * 1.0 - 0.5 * 1.5 = 9 + 1.5 - 0.75 = 9.75
+    expect(calculateEffectiveHours(input, 1.0, 1.0)).toBeCloseTo(9.75);
   });
 
-  it('有班车减少通勤', () => {
+  it('reduces commute with WFH', () => {
     const input = createTestInput({
       dailyWorkHours: 9,
       commuteHours: 2,
-      hasShuttle: true,
       restHours: 1,
     });
-    const hours = calculateEffectiveHours(input, 1.0, getShuttleFactor(true));
-    // 9 + 2 × 1.0 × 0.3 - 0.5 × 1 = 9.1
-    expect(hours).toBeCloseTo(9.1, 2);
+    // 9 + 2 * 0.6 * 1.0 - 0.5 * 1 = 9 + 1.2 - 0.5 = 9.7
+    expect(calculateEffectiveHours(input, 0.6, 1.0)).toBeCloseTo(9.7);
   });
 });
 
-describe('calculateFreshGradScore (完整流程)', () => {
-  it('文档验证用例: 成都 985 本科 + 互联网 + 22 万 TC', () => {
-    // TC = 22 万 = 18000×12 + 18000×(22/18 - 1) ≈ 简化: 15000*12 + 15000*2.67 = 220000
-    // 用 18000×12 + 800 = 216800, 接近 22 万。直接设 monthlyBaseSalary + bonusMonths 凑 220000
-    // 18k×12=216000, 还差4000, bonusMonths=4000/18000≈0.22, 算了直接 monthlyBaseSalary=18333 × 12 ≈ 220000
+// ── calculateEnvFactor ──
+describe('calculateEnvFactor', () => {
+  it('uses city savings ratio for 成都', () => {
     const input = createTestInput({
-      education: '本科',
-      schoolLevel: '985/211',
-      targetCity: '新一线',
-      targetIndustry: '互联网/软件',
-      monthlyBaseSalary: 18333,
-      bonusMonths: 0,
-      annualStock: 0,
-      monthlyAllowance: 0,
-      commuteHours: 1,
-      restHours: 1.5,
-      workEnvironment: 'CBD/甲级写字楼',
+      targetCity: '成都',
+      workEnvironment: '普通',
+      leaderRelation: '中规中矩',
+      colleagueRelation: '萍水相逢',
+      hasCafeteria: false,
+    });
+    // 1.0 * 1.0 * 1.0 * 1.44(成都 全体居民) * 1.0 = 1.44
+    expect(calculateEnvFactor(input)).toBeCloseTo(1.44);
+  });
+
+  it('boosts with good environment in 北京', () => {
+    const input = createTestInput({
+      targetCity: '北京',
+      workEnvironment: '高端园区',
       leaderRelation: '善解人意',
-      colleagueRelation: '和和睦睦',
-      cityLevel: '新一线',
+      colleagueRelation: '亲如一家',
+      hasCafeteria: true,
+      cafeteriaQuality: '丰富且便宜',
     });
-
-    const result = calculateFreshGradScore(input);
-
-    expect(result.workingDays).toBeCloseTo(240.2, 1);
-    // TC ≈ 18333 × 12 = 219996 ≈ 220000
-    expect(result.totalCompensation).toBeCloseTo(220000, -2);
-    expect(result.expectedAnnualSalary).toBeCloseTo(180000, -3);
-    expect(result.envFactor).toBeCloseTo(1.1616, 3);
-    // 9 + 1*1.0*1.0 - 0.5*1.5 = 9.25
-    expect(result.effectiveHours).toBeCloseTo(9.25, 2);
-    expect(result.score).toBeGreaterThan(5);
-    expect(result.rating.label).toBe('天选 Offer');
+    // 1.2 * 1.2 * 1.2 * 1.76(北京) * 1.15 = 1.2*1.2*1.2*1.76*1.15
+    const factor = calculateEnvFactor(input);
+    expect(factor).toBeGreaterThan(1.0);
+    expect(factor).toBeCloseTo(1.2 * 1.2 * 1.2 * 1.76 * 1.15);
   });
 
-  it('996 vs 955 工时对比', () => {
-    const base = createTestInput({
-      education: '本科', schoolLevel: '985/211',
-      targetCity: '新一线', targetIndustry: '互联网/软件',
-      monthlyBaseSalary: 15000, bonusMonths: 2.67, // ~22万
-      annualStock: 0, monthlyAllowance: 0,
-      workEnvironment: 'CBD/甲级写字楼',
-      leaderRelation: '善解人意', colleagueRelation: '和和睦睦',
-      cityLevel: '新一线', commuteHours: 1,
-    });
-
-    const good = calculateFreshGradScore({ ...base, dailyWorkHours: 9, restHours: 1.5 });
-    const bad = calculateFreshGradScore({ ...base, dailyWorkHours: 12, restHours: 1 });
-
-    expect(bad.score).toBeLessThan(good.score);
-    expect(bad.effectiveHours).toBeGreaterThan(good.effectiveHours);
-  });
-
-  it('TC 为 0 得分为 0', () => {
-    const result = calculateFreshGradScore(createTestInput({
-      monthlyBaseSalary: 0, bonusMonths: 0, annualStock: 0, monthlyAllowance: 0,
-    }));
-    expect(result.score).toBe(0);
-  });
-
-  it('totalCompensation is included in result', () => {
+  it('uses national average for unknown city', () => {
     const input = createTestInput({
-      monthlyBaseSalary: 18000, bonusMonths: 3,
-      annualStock: 5, monthlyAllowance: 1500,
+      targetCity: '未知城市',
+      workEnvironment: '普通',
+      leaderRelation: '中规中矩',
+      colleagueRelation: '萍水相逢',
+      hasCafeteria: false,
     });
-    const result = calculateFreshGradScore(input);
-    expect(result.totalCompensation).toBe(338000);
+    // 1.0 * 1.0 * 1.0 * 1.46(national) * 1.0 = 1.46
+    expect(calculateEnvFactor(input)).toBeCloseTo(1.46);
   });
 });
 
+// ── calculateEducationScore ──
+describe('calculateEducationScore', () => {
+  it('scores bachelor only (双非)', () => {
+    const input = createTestInput({ bachelorLevel: '双非', masterLevel: '无', phdLevel: '无' });
+    // 3.0 * 0.5 = 1.5
+    expect(calculateEducationScore(input)).toBeCloseTo(1.5);
+  });
+
+  it('scores bachelor + master (双非 + 985硕士)', () => {
+    const input = createTestInput({ bachelorLevel: '双非', masterLevel: '985硕士', phdLevel: '无' });
+    // 3.0 * 0.35 + 6.0 * 0.65 = 1.05 + 3.9 = 4.95
+    expect(calculateEducationScore(input)).toBeCloseTo(4.95);
+  });
+
+  it('scores bachelor + master + phd', () => {
+    const input = createTestInput({ bachelorLevel: '211', masterLevel: '985硕士', phdLevel: '985博士' });
+    // 5.0 * 0.25 + 6.0 * 0.15 + 7.0 * 0.6 = 1.25 + 0.9 + 4.2 = 6.35
+    expect(calculateEducationScore(input)).toBeCloseTo(6.35);
+  });
+
+  it('scores direct PhD (直博)', () => {
+    const input = createTestInput({ bachelorLevel: '985', masterLevel: '无', phdLevel: '985博士' });
+    // 7.0 * 0.35 + 0 + 7.0 * 0.65 = 2.45 + 4.55 = 7.0
+    expect(calculateEducationScore(input)).toBeCloseTo(7.0);
+  });
+
+  it('scores 清北 bachelor', () => {
+    const input = createTestInput({ bachelorLevel: '清北', masterLevel: '无', phdLevel: '无' });
+    // 9.5 * 0.5 = 4.75
+    expect(calculateEducationScore(input)).toBeCloseTo(4.75);
+  });
+});
+
+// ── scoreToExpectedAnnualWan ──
+describe('scoreToExpectedAnnualWan', () => {
+  it('interpolates between known values', () => {
+    // Score 3.0 → 8.5万
+    expect(scoreToExpectedAnnualWan(3.0)).toBeCloseTo(8.5);
+  });
+
+  it('clamps at minimum', () => {
+    expect(scoreToExpectedAnnualWan(0)).toBe(4);
+  });
+
+  it('clamps at maximum', () => {
+    expect(scoreToExpectedAnnualWan(15)).toBe(65);
+  });
+
+  it('interpolates linearly', () => {
+    // Score 5.5 is between 5.0→14 and 6.0→19
+    // 14 + 0.5 * (19 - 14) = 16.5
+    expect(scoreToExpectedAnnualWan(5.5)).toBeCloseTo(16.5);
+  });
+});
+
+// ── getRating ──
 describe('getRating', () => {
-  it('各评级边界', () => {
+  it('returns 大冤种 for very low score', () => {
     expect(getRating(0.3).label).toBe('大冤种');
-    expect(getRating(0.6).label).toBe('偏低');
-    expect(getRating(0.8).label).toBe('一般');
+  });
+
+  it('returns 合理 for score around 1.0', () => {
     expect(getRating(1.0).label).toBe('合理');
-    expect(getRating(1.2).label).toBe('不错');
-    expect(getRating(1.5).label).toBe('很香');
+  });
+
+  it('returns 天选 Offer for very high score', () => {
     expect(getRating(2.0).label).toBe('天选 Offer');
+  });
+});
+
+// ── calculateFreshGradScore (integration) ──
+describe('calculateFreshGradScore', () => {
+  it('produces a valid result for typical input', () => {
+    const input = createTestInput({
+      monthlyBaseSalary: 15000,
+      monthsPerYear: 14,
+      yearEndBonus: 30000,
+    });
+    const result = calculateFreshGradScore(input);
+    expect(result.score).toBeGreaterThan(0);
+    expect(result.totalCompensation).toBe(15000 * 14 + 30000);
+    expect(result.rating.label).toBeDefined();
+    expect(result.educationScore).toBeCloseTo(1.5); // 双非 bachelor only
+  });
+
+  it('produces higher score for higher salary', () => {
+    const low = calculateFreshGradScore(createTestInput({ monthlyBaseSalary: 10000 }));
+    const high = calculateFreshGradScore(createTestInput({ monthlyBaseSalary: 25000 }));
+    expect(high.score).toBeGreaterThan(low.score);
   });
 });

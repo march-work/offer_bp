@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  CITY_TIER_CITIES,
   calculateLivingCost,
+  type BuyMode,
+  type RentMode,
+  type LivingMode,
   type LivingCostResult,
+  type BuyResult,
+  type RentResult,
 } from '@/lib/living-cost';
-import type { CityTier } from '@/lib/types';
 
 interface Props {
-  cityTier: CityTier;
+  cityName: string;
   annualSalary: number;
 }
 
@@ -20,25 +23,36 @@ function getRentBarColor(ratio: number): string {
   return 'bg-red-500';
 }
 
-function getBuyBarColor(ratio: number): string {
-  if (ratio < 6) return 'bg-green-500';
-  if (ratio < 10) return 'bg-blue-500';
-  if (ratio < 15) return 'bg-orange-400';
+function getBuyBarColor(years: number): string {
+  if (years < 6) return 'bg-green-500';
+  if (years < 10) return 'bg-blue-500';
+  if (years < 15) return 'bg-orange-400';
   return 'bg-red-500';
 }
 
-export function LivingCostCard({ cityTier, annualSalary }: Props) {
-  const cities = CITY_TIER_CITIES[cityTier] ?? [];
-  const [selectedCity, setSelectedCity] = useState(cities[0] ?? '');
+const MODE_OPTIONS: { value: LivingMode; label: string }[] = [
+  { value: 'buy', label: '购房' },
+  { value: 'rent', label: '租房' },
+];
 
-  // 当 tier 变化时重置选中城市
-  useEffect(() => {
-    setSelectedCity(cities[0] ?? '');
-  }, [cityTier, cities]);
+const BUY_SUB_OPTIONS: { value: BuyMode; label: string }[] = [
+  { value: 'newhome', label: '新房' },
+  { value: 'secondhand', label: '二手房' },
+];
+
+const RENT_SUB_OPTIONS: { value: RentMode; label: string }[] = [
+  { value: 'whole', label: '整租' },
+  { value: 'shared', label: '合租' },
+];
+
+export function LivingCostCard({ cityName, annualSalary }: Props) {
+  const [mode, setMode] = useState<LivingMode>('buy');
+  const [buySub, setBuySub] = useState<BuyMode>('secondhand');
+  const [rentSub, setRentSub] = useState<RentMode>('whole');
 
   const result = useMemo(
-    () => calculateLivingCost(selectedCity, annualSalary),
-    [selectedCity, annualSalary],
+    () => calculateLivingCost(cityName, annualSalary),
+    [cityName, annualSalary],
   );
 
   if (annualSalary <= 0) {
@@ -51,42 +65,32 @@ export function LivingCostCard({ cityTier, annualSalary }: Props) {
     );
   }
 
-  if (cities.length === 0) {
+  if (!result) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h4 className="text-sm font-semibold text-gray-700 mb-2">生活成本分析</h4>
         <p className="text-xs text-gray-400">
-          暂无「{cityTier}」城市的生活成本数据，目前支持：北京、上海、深圳、广州、杭州、南京、成都、武汉、西安、合肥、青岛
+          暂无「{cityName}」的生活成本数据，目前支持：北京、上海、深圳、广州、杭州、南京、成都、武汉、西安、合肥、青岛
         </p>
       </div>
     );
   }
 
+  const currentBuy = buySub === 'newhome' ? result.newhome : result.secondhand;
+  const currentRent = rentSub === 'whole' ? result.whole : result.shared;
+  const subOptions = mode === 'buy' ? BUY_SUB_OPTIONS : RENT_SUB_OPTIONS;
+  const currentSub = mode === 'buy' ? buySub : rentSub;
+  const setSub = mode === 'buy' ? setBuySub : setRentSub;
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-semibold text-gray-700">生活成本分析</h4>
-        <select
-          value={selectedCity}
-          onChange={e => setSelectedCity(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          {cities.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <span className="text-sm text-gray-500">{cityName}</span>
       </div>
 
-      {result && <LivingCostDetails result={result} />}
-    </div>
-  );
-}
-
-function LivingCostDetails({ result }: { result: LivingCostResult }) {
-  return (
-    <div className="space-y-4">
       {/* 收入对比 */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-gray-50 rounded-lg p-3 text-center">
           <div className="text-xs text-gray-500 mb-1">城市人均收入</div>
           <div className="text-lg font-semibold text-gray-900">
@@ -103,86 +107,49 @@ function LivingCostDetails({ result }: { result: LivingCostResult }) {
         </div>
       </div>
 
-      {/* 租房指标 */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-gray-600">租房成本</span>
-          <span className={`text-xs font-semibold ${
-            result.wholeRentIncomeRatio < 0.35 ? 'text-green-600' :
-            result.wholeRentIncomeRatio < 0.50 ? 'text-orange-500' : 'text-red-500'
-          }`}>
-            {result.rentRating}
-          </span>
-        </div>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-500">整租 60㎡</span>
-            <span className="font-mono text-gray-900">¥{result.wholeRentMonthly.toLocaleString()}/月</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">合租 20㎡</span>
-            <span className="font-mono text-gray-900">¥{result.sharedRentMonthly.toLocaleString()}/月</span>
-          </div>
-          <div>
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>整租收入比 {(result.wholeRentIncomeRatio * 100).toFixed(0)}%</span>
-              <span>合理线 30%</span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${getRentBarColor(result.wholeRentIncomeRatio)}`}
-                style={{ width: `${Math.min(result.wholeRentIncomeRatio / 0.5 * 100, 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
+      {/* 主切换：购房 / 租房 */}
+      <div className="flex bg-gray-100 rounded-lg p-0.5 mb-3">
+        {MODE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setMode(opt.value)}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              mode === opt.value
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
-      {/* 买房指标 */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-gray-600">买房成本（90㎡ 二手）</span>
-          <span className={`text-xs font-semibold ${
-            result.priceIncomeRatio < 10 ? 'text-green-600' :
-            result.priceIncomeRatio < 15 ? 'text-orange-500' : 'text-red-500'
-          }`}>
-            {result.buyRating}
-          </span>
-        </div>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-500">房屋总价</span>
-            <span className="font-mono text-gray-900">{result.totalPrice} 万</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">总价收入比</span>
-            <span className="font-mono text-gray-900">{result.priceIncomeRatio.toFixed(1)} 年</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">首付（30%）</span>
-            <span className="font-mono text-gray-900">{(result.totalPrice * 0.3).toFixed(0)} 万 ≈ {result.downPaymentYears.toFixed(1)} 年收入</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">月供（30年/LPR 3.1%）</span>
-            <span className="font-mono text-gray-900">¥{result.monthlyPayment.toLocaleString()}/月</span>
-          </div>
-          <div>
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>月供收入比 {(result.mortgageIncomeRatio * 100).toFixed(0)}%</span>
-              <span>警戒线 50%</span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${getBuyBarColor(result.priceIncomeRatio)}`}
-                style={{ width: `${Math.min(result.mortgageIncomeRatio / 0.7 * 100, 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
+      {/* 子切换 */}
+      <div className="flex bg-gray-50 rounded-lg p-0.5 mb-4">
+        {subOptions.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setSub(opt.value as BuyMode & RentMode)}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              currentSub === opt.value
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
+
+      {/* 内容区 */}
+      {mode === 'buy' ? (
+        <BuyDetails result={currentBuy} />
+      ) : (
+        <RentDetails result={currentRent} />
+      )}
 
       {/* 综合居住压力 */}
-      <div className="bg-gray-50 rounded-lg p-3">
+      <div className="bg-gray-50 rounded-lg p-3 mt-4">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-gray-600">综合居住压力指数</span>
           <span className={`text-sm font-bold ${result.pressureColor}`}>
@@ -208,9 +175,93 @@ function LivingCostDetails({ result }: { result: LivingCostResult }) {
       </div>
 
       {/* 数据来源 */}
-      <p className="text-[10px] text-gray-400 text-center">
+      <p className="text-[10px] text-gray-400 text-center mt-3">
         房价数据：creprice.cn 2026-03 | 收入数据：国家统计局 2024
       </p>
+    </div>
+  );
+}
+
+function BuyDetails({ result }: { result: BuyResult }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-gray-600">买房成本（90㎡）</span>
+        <span className={`text-xs font-semibold ${
+          result.priceIncomeRatio < 10 ? 'text-green-600' :
+          result.priceIncomeRatio < 15 ? 'text-orange-500' : 'text-red-500'
+        }`}>
+          {result.rating}
+        </span>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-gray-500">均价</span>
+          <span className="font-mono text-gray-900">{result.avgPrice.toFixed(2)} 万元/㎡</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">房屋总价</span>
+          <span className="font-mono text-gray-900">{result.totalPrice} 万</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">总价收入比</span>
+          <span className="font-mono text-gray-900">{result.priceIncomeRatio.toFixed(1)} 年</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">首付（30%）</span>
+          <span className="font-mono text-gray-900">{result.downPayment} 万 ≈ {result.downPaymentYears.toFixed(1)} 年收入</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">月供（30年/LPR 3.1%）</span>
+          <span className="font-mono text-gray-900">¥{result.monthlyPayment.toLocaleString()}/月</span>
+        </div>
+        <div>
+          <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <span>月供收入比 {(result.mortgageIncomeRatio * 100).toFixed(0)}%</span>
+            <span>警戒线 50%</span>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${getBuyBarColor(result.priceIncomeRatio)}`}
+              style={{ width: `${Math.min(result.mortgageIncomeRatio / 0.7 * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RentDetails({ result }: { result: RentResult }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-gray-600">租房成本（{result.area}㎡）</span>
+        <span className={`text-xs font-semibold ${
+          result.rentIncomeRatio < 0.35 ? 'text-green-600' :
+          result.rentIncomeRatio < 0.50 ? 'text-orange-500' : 'text-red-500'
+        }`}>
+          {result.rating}
+        </span>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-gray-500">月租金</span>
+          <span className="font-mono text-gray-900">¥{result.monthlyRent.toLocaleString()}/月</span>
+        </div>
+        <div>
+          <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <span>租金收入比 {(result.rentIncomeRatio * 100).toFixed(0)}%</span>
+            <span>合理线 30%</span>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${getRentBarColor(result.rentIncomeRatio)}`}
+              style={{ width: `${Math.min(result.rentIncomeRatio / 0.5 * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

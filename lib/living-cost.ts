@@ -1,18 +1,12 @@
 // ── 城市生活成本计算模块 ──
 // 数据来源：国家统计局 2024 年城镇居民数据 + creprice.cn 2026-03 房价数据
 
-import type { CityTier } from './types';
-
 // ── 城市生活成本数据 ──
-// income: 全市居民人均可支配收入（元/年）
-// consumption: 全市居民人均消费支出（元/年）
-// secondhandPrice: 二手房均价（万元/㎡）
-// wholeRentPrice: 整租均价（元/月/㎡）
-// sharedRentPrice: 合租均价（元/月/㎡）
 export interface CityLivingData {
   income: number;
   consumption: number;
   secondhandPrice: number;
+  newhomePrice: number;
   wholeRentPrice: number;
   sharedRentPrice: number;
 }
@@ -20,97 +14,112 @@ export interface CityLivingData {
 export const CITY_LIVING_DATA: Record<string, CityLivingData> = {
   '北京': {
     income: 89090, consumption: 50667,
-    secondhandPrice: 4.78, wholeRentPrice: 66.08, sharedRentPrice: 135.93,
+    secondhandPrice: 4.78, newhomePrice: 6.50,
+    wholeRentPrice: 66.08, sharedRentPrice: 135.93,
   },
   '上海': {
     income: 91987, consumption: 54765,
-    secondhandPrice: 5.58, wholeRentPrice: 78.85, sharedRentPrice: 92.00,
+    secondhandPrice: 5.58, newhomePrice: 7.61,
+    wholeRentPrice: 78.85, sharedRentPrice: 92.00,
   },
   '深圳': {
     income: 84945, consumption: 51415,
-    secondhandPrice: 7.41, wholeRentPrice: 81.21, sharedRentPrice: 123.86,
+    secondhandPrice: 7.41, newhomePrice: 6.29,
+    wholeRentPrice: 81.21, sharedRentPrice: 123.86,
   },
   '广州': {
     income: 80591, consumption: 49500,
-    secondhandPrice: 2.88, wholeRentPrice: 39.37, sharedRentPrice: 63.20,
+    secondhandPrice: 2.88, newhomePrice: 3.58,
+    wholeRentPrice: 39.37, sharedRentPrice: 63.20,
   },
   '杭州': {
     income: 80017, consumption: 55592,
-    secondhandPrice: 2.74, wholeRentPrice: 39.99, sharedRentPrice: 50.28,
+    secondhandPrice: 2.74, newhomePrice: 2.63,
+    wholeRentPrice: 39.99, sharedRentPrice: 50.28,
   },
   '南京': {
     income: 78243, consumption: 47000,
-    secondhandPrice: 2.14, wholeRentPrice: 33.74, sharedRentPrice: 55.09,
+    secondhandPrice: 2.14, newhomePrice: 3.09,
+    wholeRentPrice: 33.74, sharedRentPrice: 55.09,
   },
   '成都': {
     income: 55000, consumption: 35000,
-    secondhandPrice: 1.18, wholeRentPrice: 24.90, sharedRentPrice: 43.58,
+    secondhandPrice: 1.18, newhomePrice: 1.64,
+    wholeRentPrice: 24.90, sharedRentPrice: 43.58,
   },
   '武汉': {
     income: 62530, consumption: 39625,
-    secondhandPrice: 1.13, wholeRentPrice: 23.22, sharedRentPrice: 45.38,
+    secondhandPrice: 1.13, newhomePrice: 1.54,
+    wholeRentPrice: 23.22, sharedRentPrice: 45.38,
   },
   '西安': {
     income: 47496, consumption: 30000,
-    secondhandPrice: 1.21, wholeRentPrice: 23.45, sharedRentPrice: 34.03,
+    secondhandPrice: 1.21, newhomePrice: 1.53,
+    wholeRentPrice: 23.45, sharedRentPrice: 34.03,
   },
   '合肥': {
     income: 58930, consumption: 32442,
-    secondhandPrice: 1.36, wholeRentPrice: 22.70, sharedRentPrice: 34.34,
+    secondhandPrice: 1.36, newhomePrice: 1.56,
+    wholeRentPrice: 22.70, sharedRentPrice: 34.34,
   },
   '青岛': {
     income: 62738, consumption: 36450,
-    secondhandPrice: 1.46, wholeRentPrice: 20.54, sharedRentPrice: 36.76,
+    secondhandPrice: 1.46, newhomePrice: 1.65,
+    wholeRentPrice: 20.54, sharedRentPrice: 36.76,
   },
 };
 
-// ── 城市等级 → 可选城市列表 ──
-export const CITY_TIER_CITIES: Record<string, string[]> = {
-  '超一线': ['北京', '上海', '深圳'],
-  '一线': ['广州', '杭州'],
-  '新一线': ['成都', '武汉', '南京', '西安'],
-  '二线': ['合肥', '青岛'],
-  '三线及以下': [],
-};
-
 // ── 计算结果类型 ──
+export type BuyMode = 'secondhand' | 'newhome';
+export type RentMode = 'whole' | 'shared';
+export type LivingMode = 'buy' | 'rent';
+
+export interface BuyResult {
+  avgPrice: number;           // 均价（万元/㎡）
+  totalPrice: number;         // 总价（万元）
+  priceIncomeRatio: number;   // 总价收入比（年）
+  downPayment: number;        // 首付（万元）
+  downPaymentYears: number;   // 首付需攒年数
+  monthlyPayment: number;     // 月供（元）
+  mortgageIncomeRatio: number; // 月供收入比
+  rating: string;
+}
+
+export interface RentResult {
+  monthlyRent: number;        // 月租（元）
+  area: number;               // 面积（㎡）
+  rentIncomeRatio: number;    // 租金收入比
+  rating: string;
+}
+
 export interface LivingCostResult {
   cityName: string;
 
-  // 租房指标
-  wholeRentMonthly: number;       // 整租月租（元）= unitPrice × area
-  sharedRentMonthly: number;      // 合租月租（元）
-  wholeRentIncomeRatio: number;   // 整租收入比
-  sharedRentIncomeRatio: number;  // 合租收入比
+  // 购房数据
+  secondhand: BuyResult;
+  newhome: BuyResult;
 
-  // 买房指标
-  totalPrice: number;             // 房屋总价（万元）= unitPrice × area
-  priceIncomeRatio: number;       // 总价收入比
-  downPaymentYears: number;       // 首付需要攒多少年
-  monthlyPayment: number;         // 月供（元）
-  mortgageIncomeRatio: number;    // 月供收入比
-
-  // 综合指标
-  livingPressureIndex: number;    // 居住压力指数
+  // 租房数据
+  whole: RentResult;
+  shared: RentResult;
 
   // 城市对比
-  cityAvgIncome: number;          // 城市人均收入
-  userIncomePercentile: number;   // 用户收入在城市的百分位估计
+  cityAvgIncome: number;
+  userIncomePercentile: number;
 
-  // 评级
-  rentRating: string;
-  buyRating: string;
+  // 综合指标
+  livingPressureIndex: number;
   pressureRating: string;
   pressureColor: string;
 }
 
 // ── 默认参数 ──
-const DEFAULT_BUY_AREA = 90;       // 买房面积（㎡）
-const DEFAULT_WHOLE_RENT_AREA = 60; // 整租面积（㎡）
-const DEFAULT_SHARED_RENT_AREA = 20; // 合租面积（㎡）
+const DEFAULT_BUY_AREA = 90;
+const DEFAULT_WHOLE_RENT_AREA = 60;
+const DEFAULT_SHARED_RENT_AREA = 20;
 const DOWN_PAYMENT_RATIO = 0.30;
 const LOAN_YEARS = 30;
-const INTEREST_RATE = 0.031;       // 当前 LPR 约 3.1%
+const INTEREST_RATE = 0.031;
 
 // ── 评级函数 ──
 function getRentRating(ratio: number): string {
@@ -120,10 +129,10 @@ function getRentRating(ratio: number): string {
   return '沉重';
 }
 
-function getBuyRating(ratio: number): string {
-  if (ratio < 6) return '轻松';
-  if (ratio < 10) return '合理';
-  if (ratio < 15) return '偏高';
+function getBuyRating(years: number): string {
+  if (years < 6) return '轻松';
+  if (years < 10) return '合理';
+  if (years < 15) return '偏高';
   return '沉重';
 }
 
@@ -144,20 +153,54 @@ function calcMonthlyPayment(loanWan: number, annualRate: number, years: number):
     / (Math.pow(1 + monthlyRate, months) - 1);
 }
 
+function computeBuyResult(unitPrice: number, annualSalary: number): BuyResult {
+  const monthlyIncome = annualSalary / 12;
+  const incomeWan = annualSalary / 10000;
+  const totalPrice = +(unitPrice * DEFAULT_BUY_AREA).toFixed(1);
+  const downPayment = +(totalPrice * DOWN_PAYMENT_RATIO).toFixed(1);
+  const loan = totalPrice - downPayment;
+  const monthlyPayment = Math.round(calcMonthlyPayment(loan, INTEREST_RATE, LOAN_YEARS));
+  const priceIncomeRatio = +(totalPrice / incomeWan).toFixed(1);
+  const downPaymentYears = +(downPayment / incomeWan).toFixed(1);
+  const mortgageIncomeRatio = +(monthlyPayment / monthlyIncome).toFixed(3);
+  return {
+    avgPrice: unitPrice,
+    totalPrice,
+    priceIncomeRatio,
+    downPayment,
+    downPaymentYears,
+    monthlyPayment,
+    mortgageIncomeRatio,
+    rating: getBuyRating(priceIncomeRatio),
+  };
+}
+
+function computeRentResult(
+  unitPrice: number,
+  area: number,
+  annualSalary: number,
+): RentResult {
+  const monthlyIncome = annualSalary / 12;
+  const monthlyRent = Math.round(unitPrice * area);
+  const rentIncomeRatio = +(monthlyRent / monthlyIncome).toFixed(3);
+  return {
+    monthlyRent,
+    area,
+    rentIncomeRatio,
+    rating: getRentRating(rentIncomeRatio),
+  };
+}
+
 // ── 简易收入百分位估计 ──
-// 基于城市人均收入和 log-normal 分布近似
 function estimateIncomePercentile(userAnnualIncome: number, cityAvgIncome: number): number {
   if (cityAvgIncome <= 0) return 50;
   const ratio = userAnnualIncome / cityAvgIncome;
-  // 简化：假设收入分布的均值约为人均的 1.0 倍，标准差 0.6 倍
-  // 用正态 CDF 近似百分位
   const z = (Math.log(ratio + 0.01) + 0.1) / 0.7;
   const percentile = Math.round(normalCDF(z) * 100);
   return Math.max(1, Math.min(99, percentile));
 }
 
 function normalCDF(z: number): number {
-  // Abramowitz & Stegun 近似
   const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
   const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
   const sign = z < 0 ? -1 : 1;
@@ -175,49 +218,30 @@ export function calculateLivingCost(
   const cityData = CITY_LIVING_DATA[cityName];
   if (!cityData || annualSalary <= 0) return null;
 
-  const monthlyIncome = annualSalary / 12;
-  const incomeWan = annualSalary / 10000;
+  const secondhand = computeBuyResult(cityData.secondhandPrice, annualSalary);
+  const newhome = computeBuyResult(cityData.newhomePrice, annualSalary);
+  const whole = computeRentResult(cityData.wholeRentPrice, DEFAULT_WHOLE_RENT_AREA, annualSalary);
+  const shared = computeRentResult(cityData.sharedRentPrice, DEFAULT_SHARED_RENT_AREA, annualSalary);
 
-  // 租房
-  const wholeRentMonthly = Math.round(cityData.wholeRentPrice * DEFAULT_WHOLE_RENT_AREA);
-  const sharedRentMonthly = Math.round(cityData.sharedRentPrice * DEFAULT_SHARED_RENT_AREA);
-  const wholeRentIncomeRatio = wholeRentMonthly / monthlyIncome;
-  const sharedRentIncomeRatio = sharedRentMonthly / monthlyIncome;
-
-  // 买房
-  const totalPrice = +(cityData.secondhandPrice * DEFAULT_BUY_AREA).toFixed(1);
-  const downPayment = totalPrice * DOWN_PAYMENT_RATIO;
-  const loan = totalPrice - downPayment;
-  const monthlyPayment = calcMonthlyPayment(loan, INTEREST_RATE, LOAN_YEARS);
-  const priceIncomeRatio = totalPrice / incomeWan;
-  const downPaymentYears = downPayment / incomeWan;
-  const mortgageIncomeRatio = monthlyPayment / monthlyIncome;
-
-  // 居住压力指数（按算法文档公式）
-  const livingPressureIndex =
-    (priceIncomeRatio / 10) * 0.5
-    + (wholeRentIncomeRatio / 0.3) * 0.3
-    + (1 - cityData.consumption / cityData.income) * 0.2;
+  // 居住压力指数
+  const livingPressureIndex = +(
+    (secondhand.priceIncomeRatio / 10) * 0.5
+    + (whole.rentIncomeRatio / 0.3) * 0.3
+    + (1 - cityData.consumption / cityData.income) * 0.2
+  ).toFixed(3);
 
   const pressure = getPressureInfo(livingPressureIndex);
   const percentile = estimateIncomePercentile(annualSalary, cityData.income);
 
   return {
     cityName,
-    wholeRentMonthly,
-    sharedRentMonthly,
-    wholeRentIncomeRatio,
-    sharedRentIncomeRatio,
-    totalPrice,
-    priceIncomeRatio,
-    downPaymentYears,
-    monthlyPayment: Math.round(monthlyPayment),
-    mortgageIncomeRatio,
-    livingPressureIndex: +livingPressureIndex.toFixed(3),
+    secondhand,
+    newhome,
+    whole,
+    shared,
     cityAvgIncome: cityData.income,
     userIncomePercentile: percentile,
-    rentRating: getRentRating(wholeRentIncomeRatio),
-    buyRating: getBuyRating(priceIncomeRatio),
+    livingPressureIndex,
     pressureRating: pressure.rating,
     pressureColor: pressure.color,
   };
