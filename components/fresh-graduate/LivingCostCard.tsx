@@ -6,7 +6,6 @@ import {
   type BuyMode,
   type RentMode,
   type LivingMode,
-  type LivingCostResult,
   type BuyResult,
   type RentResult,
 } from '@/lib/living-cost';
@@ -14,6 +13,8 @@ import {
 interface Props {
   cityName: string;
   annualSalary: number;
+  value: 'newhome' | 'secondhand' | 'whole' | 'shared';
+  onChange: (mode: 'newhome' | 'secondhand' | 'whole' | 'shared') => void;
 }
 
 function getRentBarColor(ratio: number): string {
@@ -30,25 +31,17 @@ function getBuyBarColor(years: number): string {
   return 'bg-red-500';
 }
 
-const MODE_OPTIONS: { value: LivingMode; label: string }[] = [
-  { value: 'buy', label: '购房' },
-  { value: 'rent', label: '租房' },
-];
+type LivingSubMode = BuyMode | RentMode;
 
-const BUY_SUB_OPTIONS: { value: BuyMode; label: string }[] = [
+const SUB_OPTIONS: { value: LivingSubMode; label: string }[] = [
   { value: 'newhome', label: '新房' },
   { value: 'secondhand', label: '二手房' },
-];
-
-const RENT_SUB_OPTIONS: { value: RentMode; label: string }[] = [
   { value: 'whole', label: '整租' },
   { value: 'shared', label: '合租' },
 ];
 
-export function LivingCostCard({ cityName, annualSalary }: Props) {
-  const [mode, setMode] = useState<LivingMode>('buy');
-  const [buySub, setBuySub] = useState<BuyMode>('secondhand');
-  const [rentSub, setRentSub] = useState<RentMode>('whole');
+export function LivingCostCard({ cityName, annualSalary, value, onChange }: Props) {
+  const subMode = value;
 
   const result = useMemo(
     () => calculateLivingCost(cityName, annualSalary),
@@ -76,11 +69,9 @@ export function LivingCostCard({ cityName, annualSalary }: Props) {
     );
   }
 
-  const currentBuy = buySub === 'newhome' ? result.newhome : result.secondhand;
-  const currentRent = rentSub === 'whole' ? result.whole : result.shared;
-  const subOptions = mode === 'buy' ? BUY_SUB_OPTIONS : RENT_SUB_OPTIONS;
-  const currentSub = mode === 'buy' ? buySub : rentSub;
-  const setSub = mode === 'buy' ? setBuySub : setRentSub;
+  const mode: LivingMode = (subMode === 'newhome' || subMode === 'secondhand') ? 'buy' : 'rent';
+  const currentBuy = subMode === 'newhome' ? result.newhome : result.secondhand;
+  const currentRent = subMode === 'whole' ? result.whole : result.shared;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -107,31 +98,15 @@ export function LivingCostCard({ cityName, annualSalary }: Props) {
         </div>
       </div>
 
-      {/* 主切换：购房 / 租房 */}
-      <div className="flex bg-gray-100 rounded-lg p-0.5 mb-3">
-        {MODE_OPTIONS.map((opt) => (
+      {/* 单行四选一：新房 | 二手房 | 整租 | 合租 */}
+      <div className="flex bg-gray-100 rounded-lg p-0.5 mb-4">
+        {SUB_OPTIONS.map((opt) => (
           <button
             key={opt.value}
-            onClick={() => setMode(opt.value)}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              mode === opt.value
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 子切换 */}
-      <div className="flex bg-gray-50 rounded-lg p-0.5 mb-4">
-        {subOptions.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => setSub(opt.value as BuyMode & RentMode)}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              currentSub === opt.value
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`flex-1 py-2 sm:py-1.5 text-xs font-medium rounded-md transition-colors ${
+              subMode === opt.value
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -166,7 +141,7 @@ export function LivingCostCard({ cityName, annualSalary }: Props) {
             style={{ width: `${Math.min(result.livingPressureIndex / 1.5 * 100, 100)}%` }}
           />
         </div>
-        <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+        <div className="flex justify-between text-[11px] sm:text-[10px] text-gray-400 mt-1">
           <span>轻松</span>
           <span>合理</span>
           <span>偏高</span>
@@ -175,7 +150,7 @@ export function LivingCostCard({ cityName, annualSalary }: Props) {
       </div>
 
       {/* 数据来源 */}
-      <p className="text-[10px] text-gray-400 text-center mt-3">
+      <p className="text-[11px] sm:text-[10px] text-gray-400 text-center mt-3">
         房价数据：creprice.cn 2026-03 | 收入数据：国家统计局 2024
       </p>
     </div>

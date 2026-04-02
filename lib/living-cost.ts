@@ -114,12 +114,12 @@ export interface LivingCostResult {
 }
 
 // ── 默认参数 ──
-const DEFAULT_BUY_AREA = 90;
-const DEFAULT_WHOLE_RENT_AREA = 60;
-const DEFAULT_SHARED_RENT_AREA = 20;
-const DOWN_PAYMENT_RATIO = 0.30;
-const LOAN_YEARS = 30;
-const INTEREST_RATE = 0.031;
+export const DEFAULT_BUY_AREA = 90;
+export const DEFAULT_WHOLE_RENT_AREA = 60;
+export const DEFAULT_SHARED_RENT_AREA = 20;
+export const DOWN_PAYMENT_RATIO = 0.30;
+export const LOAN_YEARS = 30;
+export const INTEREST_RATE = 0.031;
 
 // ── 评级函数 ──
 function getRentRating(ratio: number): string {
@@ -144,7 +144,7 @@ function getPressureInfo(index: number): { rating: string; color: string } {
 }
 
 // ── 等额本息月供 ──
-function calcMonthlyPayment(loanWan: number, annualRate: number, years: number): number {
+export function calcMonthlyPayment(loanWan: number, annualRate: number, years: number): number {
   const months = years * 12;
   const monthlyRate = annualRate / 12;
   if (monthlyRate <= 0 || months <= 0) return 0;

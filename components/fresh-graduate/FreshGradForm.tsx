@@ -24,9 +24,10 @@ import { calculateTotalCompensation } from '@/lib/calculate';
 interface Props {
   input: FreshGradInput;
   onChange: (field: keyof FreshGradInput, value: FreshGradInput[keyof FreshGradInput]) => void;
+  onCalculate: () => void;
 }
 
-export function FreshGradForm({ input, onChange }: Props) {
+export function FreshGradForm({ input, onChange, onCalculate }: Props) {
   return (
     <div className="space-y-4">
       {/* ── 学历 ── */}
@@ -103,7 +104,7 @@ export function FreshGradForm({ input, onChange }: Props) {
 
       {/* ── 工时 ── */}
       <FormSection title="工作条件" icon="⏰">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
           <SelectField
             label="每周工作天数"
             value={input.workDaysPerWeek}
@@ -139,7 +140,7 @@ export function FreshGradForm({ input, onChange }: Props) {
           />
         </div>
         <hr className="border-gray-100 my-2" />
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
           <SelectField
             label="日均工时"
             value={input.dailyWorkHours}
@@ -190,7 +191,7 @@ export function FreshGradForm({ input, onChange }: Props) {
           options={CAFETERIA_OPTIONS}
           onChange={(v) => onChange('cafeteriaQuality', v)}
         />
-        <div className="grid grid-cols-2 gap-x-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
           <CheckboxField
             label="有班车"
             checked={input.hasShuttle}
@@ -203,11 +204,21 @@ export function FreshGradForm({ input, onChange }: Props) {
           />
         </div>
       </FormSection>
+
+      {/* ── 桌面端计算按钮 ── */}
+      <button
+        type="button"
+        onClick={onCalculate}
+        className="hidden lg:block w-full py-3.5 bg-blue-600 text-white text-base font-semibold rounded-xl hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm"
+      >
+        开始评测
+      </button>
+
     </div>
   );
 }
 
-// ── 三列学历选择器 ──
+// ── 三列学历选择器（桌面端按钮 / 移动端下拉） ──
 function EducationSelector({
   bachelor,
   master,
@@ -225,96 +236,164 @@ function EducationSelector({
 
   return (
     <div>
-      <div className="grid grid-cols-3 gap-2">
-        {/* 本科列 */}
+      {/* ── 移动端：三行下拉 ── */}
+      <div className="flex flex-col gap-3 sm:hidden">
         <div>
-          <label className="block text-[10px] text-gray-400 mb-1 text-center">本科</label>
-          <div className="space-y-1">
+          <label className="block text-xs text-gray-500 mb-1">本科</label>
+          <select
+            value={bachelor}
+            onChange={(e) => onChange(e.target.value, '无', '无')}
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
             {BACHELOR_OPTIONS.map((opt) => (
-              <button
-                key={opt.label}
-                type="button"
-                onClick={() => onChange(opt.label, '无', '无')}
-                className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors ${
-                  bachelor === opt.label
-                    ? 'bg-blue-600 text-white font-medium'
-                    : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-              >
-                {opt.label}
-              </button>
+              <option key={opt.label} value={opt.label}>{opt.label}</option>
             ))}
-          </div>
+          </select>
         </div>
-
-        {/* 硕士列 */}
         <div>
-          <label className="block text-[10px] text-gray-400 mb-1 text-center">硕士</label>
-          <div className="space-y-1">
+          <label className="block text-xs text-gray-500 mb-1">硕士</label>
+          <select
+            value={isDirectPhD ? '直博' : master}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '直博') {
+                onChange(bachelor, '无', '双非博士');
+              } else if (v === '无') {
+                onChange(bachelor, '无', '无');
+              } else {
+                onChange(bachelor, v, '无');
+              }
+            }}
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="无">无</option>
             {MASTER_OPTIONS.map((opt) => (
-              <button
-                key={opt.label}
-                type="button"
-                onClick={() => {
-                  if (opt.label === '直博') {
-                    onChange(bachelor, '无', '双非博士');
-                  } else {
-                    onChange(bachelor, opt.label, '无');
-                  }
-                }}
-                disabled={hasPhd && opt.label !== '直博'}
-                className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors disabled:opacity-40 ${
-                  master === opt.label || (opt.label === '直博' && isDirectPhD)
-                    ? 'bg-blue-600 text-white font-medium'
-                    : !hasMaster && opt.label !== '直博'
-                      ? 'bg-gray-100 text-gray-400'
-                      : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-              >
-                {opt.label}
-                {opt.label === '直博' && ' ↲'}
-              </button>
+              <option key={opt.label} value={opt.label}>{opt.label}</option>
             ))}
-          </div>
+          </select>
         </div>
-
-        {/* 博士列 */}
         <div>
-          <label className="block text-[10px] text-gray-400 mb-1 text-center">博士</label>
-          <div className="space-y-1">
+          <label className="block text-xs text-gray-500 mb-1">博士</label>
+          <select
+            value={phd}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '无') {
+                onChange(bachelor, hasMaster ? master : '无', '无');
+              } else if (!hasMaster) {
+                onChange(bachelor, '无', v);
+              } else {
+                onChange(bachelor, master, v);
+              }
+            }}
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="无">无</option>
             {PHD_OPTIONS.map((opt) => (
-              <button
-                key={opt.label}
-                type="button"
-                onClick={() => {
-                  if (!hasMaster) {
-                    onChange(bachelor, '无', opt.label);
-                  } else {
-                    onChange(bachelor, master, opt.label);
-                  }
-                }}
-                disabled={!hasMaster && master !== '直博' && master !== '无'}
-                className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors disabled:opacity-40 ${
-                  phd === opt.label
-                    ? 'bg-blue-600 text-white font-medium'
-                    : phd === '无'
-                      ? 'bg-gray-100 text-gray-400'
-                      : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-              >
-                {opt.label}
-              </button>
+              <option key={opt.label} value={opt.label}>{opt.label}</option>
             ))}
-          </div>
+          </select>
         </div>
-      </div>
-      {isDirectPhD && (
-        <div className="text-center mt-2">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">
+        {isDirectPhD && (
+          <span className="text-xs px-2 py-1 rounded bg-purple-50 text-purple-600 self-start">
             直博
           </span>
+        )}
+      </div>
+
+      {/* ── 桌面端：三列按钮 ── */}
+      <div className="hidden sm:block">
+        <div className="grid grid-cols-3 gap-2">
+          {/* 本科列 */}
+          <div>
+            <label className="block text-[10px] text-gray-400 mb-1 text-center">本科</label>
+            <div className="space-y-1">
+              {BACHELOR_OPTIONS.map((opt) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => onChange(opt.label, '无', '无')}
+                  className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors ${
+                    bachelor === opt.label
+                      ? 'bg-blue-600 text-white font-medium'
+                      : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 硕士列 */}
+          <div>
+            <label className="block text-[10px] text-gray-400 mb-1 text-center">硕士</label>
+            <div className="space-y-1">
+              {MASTER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => {
+                    if (opt.label === '直博') {
+                      onChange(bachelor, '无', '双非博士');
+                    } else {
+                      onChange(bachelor, opt.label, '无');
+                    }
+                  }}
+                  disabled={hasPhd && opt.label !== '直博'}
+                  className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors disabled:opacity-40 ${
+                    master === opt.label || (opt.label === '直博' && isDirectPhD)
+                      ? 'bg-blue-600 text-white font-medium'
+                      : !hasMaster && opt.label !== '直博'
+                        ? 'bg-gray-100 text-gray-400'
+                        : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                >
+                  {opt.label}
+                  {opt.label === '直博' && ' ↲'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 博士列 */}
+          <div>
+            <label className="block text-[10px] text-gray-400 mb-1 text-center">博士</label>
+            <div className="space-y-1">
+              {PHD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => {
+                    if (!hasMaster) {
+                      onChange(bachelor, '无', opt.label);
+                    } else {
+                      onChange(bachelor, master, opt.label);
+                    }
+                  }}
+                  disabled={!hasMaster && master !== '直博' && master !== '无'}
+                  className={`w-full text-[11px] px-1.5 py-1 rounded text-left transition-colors disabled:opacity-40 ${
+                    phd === opt.label
+                      ? 'bg-blue-600 text-white font-medium'
+                      : phd === '无'
+                        ? 'bg-gray-100 text-gray-400'
+                        : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      )}
+        {isDirectPhD && (
+          <div className="text-center mt-2">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">
+              直博
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -322,7 +401,7 @@ function EducationSelector({
 // ── 通用子组件 ──
 function FormSection({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
       <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
         <span>{icon}</span>
         {title}
@@ -424,7 +503,7 @@ function CheckboxField({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
       />
       <span className="text-sm text-gray-700">{label}</span>
     </label>

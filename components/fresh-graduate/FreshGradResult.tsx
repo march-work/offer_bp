@@ -24,8 +24,8 @@ export function FreshGradResult({ result }: Props) {
   return (
     <div className="space-y-4">
       {/* 核心分数 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-        <div className={`text-5xl font-bold ${result.rating.color} mb-1`}>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 text-center">
+        <div className={`text-4xl sm:text-5xl font-bold ${result.rating.color} mb-1`}>
           {result.score.toFixed(2)}
         </div>
         <div className={`text-xl font-semibold ${result.rating.color} mb-1`}>
@@ -41,29 +41,27 @@ export function FreshGradResult({ result }: Props) {
           <MetricBox
             label="你的 TC（年总包）"
             value={`${(result.totalCompensation / 10000).toFixed(1)}万`}
-            sub={`日薪 ¥${result.dailySalary.toFixed(0)}`}
+            sub={`日薪 ¥${(result.totalCompensation / result.workingDays).toFixed(0)}`}
           />
-          <MetricBox
-            label="期望 TC"
-            value={`${(result.expectedAnnualSalary / 10000).toFixed(1)}万`}
-            sub={`日薪 ¥${result.expectedDailySalary.toFixed(0)}`}
-          />
+          {result.industryAvgSalary > 0 ? (
+            <MetricBox
+              label="行业平均年薪"
+              value={`${(result.industryAvgSalary / 10000).toFixed(1)}万`}
+              sub={`日薪 ¥${(result.industryAvgSalary / 260).toFixed(0)}`}
+            />
+          ) : (
+            <MetricBox
+              label="期望 TC"
+              value={`${(result.expectedAnnualSalary / 10000).toFixed(1)}万`}
+              sub={`日薪 ¥${(result.expectedAnnualSalary / 260).toFixed(0)}`}
+            />
+          )}
         </div>
-        {result.industryAvgSalary > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">行业平均年薪</span>
-              <span className="font-mono text-gray-700">
-                {(result.industryAvgSalary / 10000).toFixed(1)}万
-                <span className="text-xs text-gray-400 ml-1">（官方统计）</span>
-              </span>
-            </div>
-          </div>
-        )}
         <div className="mt-3 pt-3 border-t border-gray-100">
           <SalaryBar
-            actual={result.dailySalary}
-            expected={result.expectedDailySalary}
+            actual={result.totalCompensation}
+            expected={result.industryAvgSalary > 0 ? result.industryAvgSalary : result.expectedAnnualSalary}
+            label={result.industryAvgSalary > 0 ? '行业平均' : '学历期望'}
           />
         </div>
       </div>
@@ -80,7 +78,7 @@ export function FreshGradResult({ result }: Props) {
       </div>
 
       {/* 公式说明 */}
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+      <div className="hidden sm:block bg-gray-50 rounded-xl border border-gray-200 p-4">
         <p className="text-xs text-gray-400 font-mono leading-relaxed">
           Score = (日薪 × 环境系数 × 8) / (期望日薪 × 有效工时)<br />
           = ({result.dailySalary.toFixed(0)} × {result.envFactor.toFixed(4)} × 8)<br />
@@ -102,7 +100,7 @@ function MetricBox({ label, value, sub }: { label: string; value: string; sub?: 
   );
 }
 
-function SalaryBar({ actual, expected }: { actual: number; expected: number }) {
+function SalaryBar({ actual, expected, label }: { actual: number; expected: number; label: string }) {
   const ratio = actual / expected;
   const percentage = Math.min(ratio * 100, 200);
   const isAbove = ratio >= 1;
@@ -110,18 +108,25 @@ function SalaryBar({ actual, expected }: { actual: number; expected: number }) {
   return (
     <div>
       <div className="flex justify-between text-xs text-gray-500 mb-1">
-        <span>{(ratio * 100).toFixed(0)}% of expected</span>
+        <span>{(ratio * 100).toFixed(0)}% {label}</span>
         <span className={isAbove ? 'text-green-600' : 'text-orange-500'}>
-          {isAbove ? '超出期望' : '低于期望'}
+          {isAbove ? '高于平均' : '低于平均'}
         </span>
       </div>
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-200 rounded-full overflow-hidden relative">
+        {/* 100% 基准线 */}
+        <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gray-400 z-10" />
         <div
           className={`h-full rounded-full transition-all duration-500 ${
             isAbove ? 'bg-green-500' : 'bg-orange-400'
           }`}
-          style={{ width: `${Math.min(percentage, 100)}%` }}
+          style={{ width: `${Math.min(percentage / 2, 100)}%` }}
         />
+      </div>
+      <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+        <span>0%</span>
+        <span>{label}</span>
+        <span>200%</span>
       </div>
     </div>
   );

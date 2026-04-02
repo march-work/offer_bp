@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(python -c \":*)",
-      "Bash(python -X utf8 -c \":*)"
+      "Bash(python -X utf8 -c \":*)",
+      "WebSearch",
+      "Bash(npm i:*)",
+      "Bash(npx agent-browser:*)",
+      "Bash(agent-browser skill:*)",
+      "Bash(agent-browser:*)"
     ]
   }
 }

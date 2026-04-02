@@ -57,6 +57,9 @@ export interface FreshGradInput {
   hasShuttle: boolean;
   hasCafeteria: boolean;
   cafeteriaQuality: string;
+
+  // 居住方式（影响城市存钱系数）
+  housingMode: 'newhome' | 'secondhand' | 'whole' | 'shared';
 }
 
 export interface FreshGradResult {

@@ -5,7 +5,7 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       {/* 标题区 */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-3">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mb-3">
           Offer <span className="text-blue-600">BP</span>
         </h1>
         <p className="text-lg text-gray-500">
@@ -18,7 +18,7 @@ export default function HomePage() {
         {/* 应届生 */}
         <Link
           href="/fresh-graduate"
-          className="group block rounded-xl border border-gray-200 bg-white p-8 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+          className="group block rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
         >
           <div className="text-3xl mb-4">🎓</div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">

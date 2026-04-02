@@ -3,7 +3,6 @@
 
 import type { FreshGradInput, FreshGradResult, RatingInfo } from './types';
 import {
-  PPP_FACTOR_CHINA,
   STANDARD_WORKING_DAYS,
   STANDARD_HOURS,
   BACHELOR_OPTIONS,
@@ -22,6 +21,16 @@ import {
   RATINGS,
 } from './constants';
 import { getIndustryInfo } from './industry-salary';
+import {
+  CITY_LIVING_DATA,
+  calcMonthlyPayment,
+  DEFAULT_BUY_AREA as HOUSING_BUY_AREA,
+  DEFAULT_WHOLE_RENT_AREA as HOUSING_WHOLE_RENT_AREA,
+  DEFAULT_SHARED_RENT_AREA as HOUSING_SHARED_RENT_AREA,
+  DOWN_PAYMENT_RATIO as HOUSING_DOWN_PAYMENT,
+  LOAN_YEARS as HOUSING_LOAN_YEARS,
+  INTEREST_RATE as HOUSING_INTEREST_RATE,
+} from './living-cost';
 
 const SHUTTLE_FACTOR_HAS = 0.3;
 const SHUTTLE_FACTOR_NO = 1.0;
@@ -111,10 +120,10 @@ export function calculateWorkingDays(input: FreshGradInput): number {
   );
 }
 
-/** 计算标准化日薪 */
+/** 计算真实日薪（CNY） */
 export function calculateDailySalary(annualSalary: number, workingDays: number): number {
   if (workingDays <= 0) return 0;
-  return (annualSalary * PPP_FACTOR_CHINA) / workingDays;
+  return annualSalary / workingDays;
 }
 
 /** 计算期望日薪 */
@@ -158,15 +167,69 @@ export function calculateEffectiveHours(
   );
 }
 
+/** 计算指定城市的年居住成本 */
+function computeAnnualHousingCost(city: string, mode: FreshGradInput['housingMode']): number {
+  const cityData = CITY_LIVING_DATA[city];
+  if (!cityData) return 0;
+
+  switch (mode) {
+    case 'whole':
+      return cityData.wholeRentPrice * HOUSING_WHOLE_RENT_AREA * 12;
+    case 'shared':
+      return cityData.sharedRentPrice * HOUSING_SHARED_RENT_AREA * 12;
+    case 'newhome':
+      return computeAnnualMortgage(cityData.newhomePrice);
+    case 'secondhand':
+      return computeAnnualMortgage(cityData.secondhandPrice);
+    default:
+      return 0;
+  }
+}
+
+/** 计算购房年月供 × 12 = 年居住成本 */
+function computeAnnualMortgage(unitPriceWan: number): number {
+  const totalPriceWan = unitPriceWan * HOUSING_BUY_AREA;
+  const downPayment = totalPriceWan * HOUSING_DOWN_PAYMENT;
+  const loanWan = totalPriceWan - downPayment;
+  const monthlyPayment = calcMonthlyPayment(loanWan, HOUSING_INTEREST_RATE, HOUSING_LOAN_YEARS);
+  return monthlyPayment * 12;
+}
+
+/** 11 城市含居住成本的储蓄率均值（归一化基数，默认合租模式） */
+const CITY_SAVINGS_RATE_WITH_HOUSING_AVG = (() => {
+  let total = 0;
+  for (const [city, data] of Object.entries(CITY_LIVING_DATA)) {
+    const housingCost = computeAnnualHousingCost(city, 'shared');
+    const savingsRate = (data.income - data.consumption - housingCost) / data.income;
+    total += savingsRate;
+  }
+  return total / Object.keys(CITY_LIVING_DATA).length;
+})();
+
 /** 计算环境系数 */
 export function calculateEnvFactor(input: FreshGradInput): number {
   const workEnv = WORK_ENV_FACTOR[input.workEnvironment] ?? 1.0;
   const leader = LEADER_FACTOR[input.leaderRelation] ?? 1.0;
   const colleague = COLLEAGUE_FACTOR[input.colleagueRelation] ?? 1.0;
-  const citySavings = CITY_SAVINGS_RATIO[input.targetCity] ?? NATIONAL_SAVINGS_RATIO;
+
   const cafeteria = input.hasCafeteria
     ? (CAFETERIA_FACTOR[input.cafeteriaQuality ?? '普通'] ?? 1.0)
     : 1.0;
+
+  // 岡位：计算含居住成本的储蓄率
+  const city = input.targetCity;
+  const cityData = CITY_LIVING_DATA[city];
+  let citySavings: number;
+  if (!cityData) {
+    // 无数据城市回退：用全国储蓄率，归一化
+    const raw = CITY_SAVINGS_RATIO[city] ?? NATIONAL_SAVINGS_RATIO;
+    citySavings = ((raw - 1) / raw) / CITY_SAVINGS_RATE_WITH_HOUSING_AVG;
+  } else {
+    const housingCost = computeAnnualHousingCost(city, input.housingMode);
+    // 储蓄率 = (收入 - 消费 - 居住成本) / 收入
+    const savingsRate = (cityData.income - cityData.consumption - housingCost) / cityData.income;
+    citySavings = savingsRate / CITY_SAVINGS_RATE_WITH_HOUSING_AVG;
+  }
   return workEnv * leader * colleague * citySavings * cafeteria;
 }
 

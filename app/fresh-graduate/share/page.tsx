@@ -36,6 +36,7 @@ function ShareContent() {
     hasShuttle: searchParams.get('sh') === '1',
     hasCafeteria: searchParams.get('cf') === '1',
     cafeteriaQuality: searchParams.get('cq') ?? '普通',
+    housingMode: (searchParams.get('hm') ?? 'shared') as FreshGradInput['housingMode'],
   }), [searchParams]);
 
   const result = useMemo(() => calculateFreshGradScore(input), [input]);
