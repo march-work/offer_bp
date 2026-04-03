@@ -12,14 +12,16 @@ import {
   MASTER_OPTIONS,
   PHD_OPTIONS,
   SALARY_SCORE_MAP,
-  CITY_TO_TIER,
   INDUSTRY_FACTOR,
   WORK_ENV_FACTOR,
   LEADER_FACTOR,
+  GROWTH_FACTOR,
+  ROLE_CORE_FACTOR,
+  COMPANY_SIZE_FACTOR,
+  OVERTIME_CULTURE_FACTOR,
   COLLEAGUE_FACTOR,
   CAFETERIA_FACTOR,
   LOCATION_PREF_FACTOR,
-  NATIONAL_SAVINGS_RATIO,
   RATINGS,
 } from './constants';
 import { getIndustryInfo } from './industry-salary';
@@ -249,6 +251,23 @@ export function calculateEnvFactor(
     ? (CAFETERIA_FACTOR[input.cafeteriaQuality ?? '普通'] ?? 1.0)
     : 1.0;
   const locationPref = LOCATION_PREF_FACTOR[input.locationPreference] ?? 1.0;
+  /** 基数系数：基数/月薪 比值分段线性映射 */
+  function calcBaseFactor(ratio: number): number {
+    if (ratio < 0.5) return 0.8;
+    if (ratio <= 0.8) return 1.0;
+    if (ratio <= 1.1) return 1.0 + (ratio - 0.8) / (1.1 - 0.8) * 0.1;
+    return 1.2;
+  }
+
+  const salary = input.monthlyBaseSalary || 1;
+  const socialInsuranceFactor = input.hasSocialInsurance === '有'
+    ? calcBaseFactor((input.socialInsuranceBase || salary) / salary)
+    : 0.8;
+  const housingFundFactor = input.hasHousingFund === '有'
+    ? calcBaseFactor((input.housingFundBase || salary) / salary)
+    : 0.8;
+  const extraInsuranceFactor = input.hasExtraInsurance ? 1.1 : 1.0;
+  const laborFactor = socialInsuranceFactor * housingFundFactor * extraInsuranceFactor;
 
   const housingCost = computeAnnualHousingCost(input.housingMode, cityData);
   const savingsRate = (cityData.income - cityData.consumption * 0.7 - housingCost) / cityData.income;
@@ -259,8 +278,16 @@ export function calculateEnvFactor(
   const settlement = calcSettlementFactor(annualSalary, cityData.newhomePrice);
   const newhomeDownPayment = cityData.newhomePrice * 10000 * HOUSING_BUY_AREA * HOUSING_DOWN_PAYMENT;
 
+  // ── 平台系数 ──
+  const growthVal = GROWTH_FACTOR[input.growthFactor] ?? 1.0;
+  const roleCoreVal = ROLE_CORE_FACTOR[input.roleCoreFactor] ?? 1.0;
+  const companySizeVal = COMPANY_SIZE_FACTOR[input.companySizeFactor] ?? 1.0;
+  const overtimeCultureVal = OVERTIME_CULTURE_FACTOR[input.overtimeCultureFactor] ?? 1.0;
+  // 平台系数 = 发展 × 岗位核心 × 公司规模 / 加班文化（加班文化越严重系数越大→放分母→分数越低）
+  const platformFactor = growthVal * roleCoreVal * companySizeVal / overtimeCultureVal;
+
   return {
-    value: workEnv * leader * colleague * citySavings * cafeteria * settlement * locationPref,
+    value: workEnv * leader * colleague * citySavings * cafeteria * settlement * locationPref * laborFactor * platformFactor,
     factors: {
       workEnv, leader, colleague, cafeteria, citySavings,
       cityIncome: cityData.income,
@@ -270,6 +297,15 @@ export function calculateEnvFactor(
       settlement,
       newhomeDownPayment,
       locationPref,
+      laborFactor,
+      socialInsuranceFactor,
+      housingFundFactor,
+      extraInsuranceFactor,
+      platformFactor,
+      growthFactor: growthVal,
+      roleCoreFactor: roleCoreVal,
+      companySizeFactor: companySizeVal,
+      overtimeCultureFactor: overtimeCultureVal,
     },
   };
 }

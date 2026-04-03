@@ -1,6 +1,6 @@
 // ── 应届生评测器常量表 ──
 
-import type { CityTier, RatingInfo } from './types';
+import type { RatingInfo } from './types';
 
 // ── 标准年工作日基准 ──
 export const STANDARD_WORKING_DAYS = 260;
@@ -67,26 +67,15 @@ export const CITY_OPTIONS = [
   '南京', '成都', '武汉', '西安', '合肥', '青岛', '其他',
 ] as const;
 
-export const CITY_TO_TIER: Record<string, CityTier> = {
-  '北京': '超一线', '上海': '超一线', '深圳': '超一线',
-  '广州': '一线', '杭州': '一线',
-  '南京': '新一线', '成都': '新一线', '武汉': '新一线', '西安': '新一线',
-  '合肥': '二线', '青岛': '二线',
-  '其他': '三线及以下',
-};
-
-export const CITY_SALARY_FACTOR: Record<string, number> = {
-  '超一线': 1.30,
-  '一线': 1.15,
-  '新一线': 1.00,
-  '二线': 0.85,
-  '三线及以下': 0.70,
-};
-
 // ── 全国平均存钱系数 ──
 // 数据来源：国家统计局 2024 年
 // 系数 = 全体居民人均可支配收入 / 全体居民人均消费支出
 export const NATIONAL_SAVINGS_RATIO = 1.46;
+
+// ── 全国居民收入/支出数据（元/年）──
+// 数据来源：国家统计局 2024 年
+export const NATIONAL_INCOME = 41314;
+export const NATIONAL_EXPENDITURE = 28227;
 
 // ── 行业系数（仅用于无真实数据时的兜底）──
 export const INDUSTRY_FACTOR: Record<string, number> = {
@@ -138,6 +127,43 @@ export const LOCATION_PREF_FACTOR: Record<string, number> = {
   '无所谓': 1.0,
   '不太满意/有点远': 0.9,
 };
+
+// ── 平台系数因子 ──
+export const GROWTH_FACTOR: Record<string, number> = {
+  '晋升路径清晰': 1.2,
+  '有一定空间': 1.1,
+  '一般': 1.0,
+  '空间有限': 0.9,
+  '几乎没有': 0.8,
+};
+
+export const ROLE_CORE_FACTOR: Record<string, number> = {
+  '核心业务线': 1.2,
+  '重要支撑': 1.1,
+  '一般': 1.0,
+  '边缘岗位': 0.9,
+  '随时可替代': 0.8,
+};
+
+export const COMPANY_SIZE_FACTOR: Record<string, number> = {
+  '大厂/行业头部': 1.2,
+  '中大型企业': 1.1,
+  '中型公司': 1.0,
+  '小公司': 0.9,
+  '初创/微型': 0.8,
+};
+
+export const OVERTIME_CULTURE_FACTOR: Record<string, number> = {
+  '准点下班': 1.0,
+  '偶尔加班': 1.1,
+  '常态化加班': 1.2,
+  '严重内卷': 1.3,
+};
+
+export const GROWTH_OPTIONS = ['晋升路径清晰', '有一定空间', '一般', '空间有限', '几乎没有'] as const;
+export const ROLE_CORE_OPTIONS = ['核心业务线', '重要支撑', '一般', '边缘岗位', '随时可替代'] as const;
+export const COMPANY_SIZE_OPTIONS = ['大厂/行业头部', '中大型企业', '中型公司', '小公司', '初创/微型'] as const;
+export const OVERTIME_CULTURE_OPTIONS = ['准点下班', '偶尔加班', '常态化加班', '严重内卷'] as const;
 
 // ── 评级体系 ──
 export const RATINGS: { max: number; info: RatingInfo }[] = [

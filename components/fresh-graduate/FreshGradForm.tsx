@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import type { FreshGradInput } from '@/lib/types';
 import {
   BACHELOR_OPTIONS,
@@ -13,6 +14,10 @@ import {
   CAFETERIA_OPTIONS,
   LOCATION_PREF_OPTIONS,
   WFH_DAYS_OPTIONS,
+  GROWTH_OPTIONS,
+  ROLE_CORE_OPTIONS,
+  COMPANY_SIZE_OPTIONS,
+  OVERTIME_CULTURE_OPTIONS,
 } from '@/lib/constants';
 import { calculateTotalCompensation } from '@/lib/calculate';
 
@@ -25,6 +30,8 @@ interface Props {
 }
 
 export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoading }: Props) {
+  const housingFundManuallyEdited = useRef(false);
+
   return (
     <div className="space-y-4">
       {/* ── 学历 ── */}
@@ -117,6 +124,72 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           placeholder="如 500，无则填 0"
         />
         <TCPreview input={input} />
+        <div className="grid grid-cols-2 gap-x-4">
+          <SelectField
+            label="五险"
+            value={input.hasSocialInsurance}
+            options={['', '有', '无']}
+            onChange={(v) => {
+              onChange('hasSocialInsurance', v);
+              if (v === '有' && !input.socialInsuranceBase) {
+                onChange('socialInsuranceBase', input.monthlyBaseSalary);
+                if (!housingFundManuallyEdited.current) {
+                  onChange('housingFundBase', input.monthlyBaseSalary);
+                }
+              }
+            }}
+            hint={!input.hasSocialInsurance ? '请选择' : undefined}
+            placeholder="请选择"
+          />
+          <SelectField
+            label="公积金"
+            value={input.hasHousingFund}
+            options={['', '有', '无']}
+            onChange={(v) => {
+              onChange('hasHousingFund', v);
+              if (v === '有' && !input.housingFundBase) {
+                onChange('housingFundBase', input.socialInsuranceBase || input.monthlyBaseSalary);
+              }
+            }}
+            hint={!input.hasHousingFund ? '请选择' : undefined}
+            placeholder="请选择"
+          />
+        </div>
+        {input.hasSocialInsurance === '有' && (
+          <NumberField
+            label="五险基数（元/月）"
+            value={input.socialInsuranceBase}
+            onChange={(v) => {
+              onChange('socialInsuranceBase', v);
+              if (!housingFundManuallyEdited.current) {
+                onChange('housingFundBase', v);
+              }
+            }}
+            min={0}
+            step={100}
+            placeholder="默认等于月薪"
+          />
+        )}
+        {input.hasHousingFund === '有' && (
+          <NumberField
+            label="公积金基数（元/月）"
+            value={input.housingFundBase}
+            onChange={(v) => {
+              housingFundManuallyEdited.current = true;
+              onChange('housingFundBase', v);
+            }}
+            min={0}
+            step={100}
+            placeholder="默认等于五险基数"
+          />
+        )}
+        {(input.hasSocialInsurance === '有' || input.hasHousingFund === '有') && (
+          <CheckboxField
+            label="有六险或二金"
+            checked={input.hasExtraInsurance}
+            onChange={(v) => onChange('hasExtraInsurance', v)}
+          />
+        )}
       </FormSection>
 
       {/* ── 工时 ── */}
@@ -208,12 +281,6 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           options={COLLEAGUE_OPTIONS}
           onChange={(v) => onChange('colleagueRelation', v)}
         />
-        <SelectField
-          label="食堂质量"
-          value={input.cafeteriaQuality ?? '普通'}
-          options={CAFETERIA_OPTIONS}
-          onChange={(v) => onChange('cafeteriaQuality', v)}
-        />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
           <CheckboxField
             label="有班车"
@@ -226,6 +293,42 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
             onChange={(v) => onChange('hasCafeteria', v)}
           />
         </div>
+        {input.hasCafeteria && (
+          <SelectField
+            label="食堂质量"
+            value={input.cafeteriaQuality ?? '普通'}
+            options={CAFETERIA_OPTIONS}
+            onChange={(v) => onChange('cafeteriaQuality', v)}
+          />
+        )}
+      </FormSection>
+
+      {/* ── 平台系数 ── */}
+      <FormSection title="平台系数" icon="📈">
+        <SelectField
+          label="个人发展空间"
+          value={input.growthFactor}
+          options={GROWTH_OPTIONS}
+          onChange={(v) => onChange('growthFactor', v)}
+        />
+        <SelectField
+          label="岗位核心程度"
+          value={input.roleCoreFactor}
+          options={ROLE_CORE_OPTIONS}
+          onChange={(v) => onChange('roleCoreFactor', v)}
+        />
+        <SelectField
+          label="公司规模"
+          value={input.companySizeFactor}
+          options={COMPANY_SIZE_OPTIONS}
+          onChange={(v) => onChange('companySizeFactor', v)}
+        />
+        <SelectField
+          label="加班文化"
+          value={input.overtimeCultureFactor}
+          options={OVERTIME_CULTURE_OPTIONS}
+          onChange={(v) => onChange('overtimeCultureFactor', v)}
+        />
       </FormSection>
 
       {/* ── 桌面端计算按钮 ── */}
@@ -442,6 +545,7 @@ function SelectField<T extends string | number>({
   suffix,
   hint,
   disabled,
+  placeholder,
 }: {
   label: string;
   value: T;
@@ -450,6 +554,7 @@ function SelectField<T extends string | number>({
   suffix?: string;
   hint?: string;
   disabled?: boolean;
+  placeholder?: string;
 }) {
   return (
     <div>
@@ -467,6 +572,9 @@ function SelectField<T extends string | number>({
         disabled={disabled}
         className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
       >
+        {placeholder && (
+          <option value="" disabled>{placeholder}</option>
+        )}
         {options.map((opt) => (
           <option key={String(opt)} value={String(opt)}>
             {String(opt)}{suffix ?? ''}

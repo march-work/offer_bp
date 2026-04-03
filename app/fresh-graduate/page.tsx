@@ -15,7 +15,7 @@ import {
   commuteMinutesToDailyHours,
   type CityDataBundle,
 } from '@/lib/city-data';
-import { CITY_OPTIONS } from '@/lib/constants';
+import { CITY_OPTIONS, NATIONAL_INCOME, NATIONAL_EXPENDITURE, NATIONAL_SAVINGS_RATIO } from '@/lib/constants';
 
 const DEFAULT_INPUT: FreshGradInput = {
   bachelorLevel: '双非',
@@ -43,6 +43,15 @@ const DEFAULT_INPUT: FreshGradInput = {
   hasCafeteria: false,
   cafeteriaQuality: '普通',
   locationPreference: '无所谓',
+  hasSocialInsurance: '',
+  hasHousingFund: '',
+  socialInsuranceBase: 0,
+  housingFundBase: 0,
+  hasExtraInsurance: false,
+  growthFactor: '一般',
+  roleCoreFactor: '一般',
+  companySizeFactor: '中型公司',
+  overtimeCultureFactor: '偶尔加班',
   housingMode: 'shared',
 };
 
@@ -108,9 +117,9 @@ export default function FreshGradPage() {
       wholeRentPrice: housing.wholeRentPrice,
       sharedRentPrice: housing.sharedRentPrice,
       industrySalaries,
-      nationalIncome: 41314,
-      nationalExpenditure: 28227,
-      nationalSavingsRatio: 1.46,
+      nationalIncome: NATIONAL_INCOME,
+      nationalExpenditure: NATIONAL_EXPENDITURE,
+      nationalSavingsRatio: NATIONAL_SAVINGS_RATIO,
     };
   }, [cityDataBundle, input.targetDistrict]);
 
@@ -134,6 +143,22 @@ export default function FreshGradPage() {
     const tc = calculateTotalCompensation(input);
     if (tc <= 0) {
       alert('请先填写月薪（月薪需大于 0）');
+      return;
+    }
+    if (!input.hasSocialInsurance) {
+      alert('请选择是否有五险');
+      return;
+    }
+    if (!input.hasHousingFund) {
+      alert('请选择是否有公积金');
+      return;
+    }
+    if (input.hasSocialInsurance === '有' && (!input.socialInsuranceBase || input.socialInsuranceBase <= 0)) {
+      alert('请填写五险基数');
+      return;
+    }
+    if (input.hasHousingFund === '有' && (!input.housingFundBase || input.housingFundBase <= 0)) {
+      alert('请填写公积金基数');
       return;
     }
     setCalculatedInput({ ...input });
@@ -228,8 +253,8 @@ export default function FreshGradPage() {
       {/* 移动端底部固定栏 */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
         {result ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <span className={`text-2xl font-bold ${result.rating.color}`}>
                 {result.score.toFixed(2)}
               </span>
@@ -237,6 +262,13 @@ export default function FreshGradPage() {
                 {result.rating.label}
               </span>
             </div>
+            <button
+              type="button"
+              onClick={handleCalculate}
+              className="shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg active:bg-blue-800 transition-colors"
+            >
+              重新评测
+            </button>
           </div>
         ) : (
           <button

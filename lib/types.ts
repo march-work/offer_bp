@@ -1,6 +1,5 @@
 // ── 应届生评测器类型定义 ──
 
-export type CityTier = '超一线' | '一线' | '新一线' | '二线' | '三线及以下';
 export type Industry =
   | '金融专业'
   | '信息传输、软件和信息技术服务专业'
@@ -58,6 +57,17 @@ export interface FreshGradInput {
   hasCafeteria: boolean;
   cafeteriaQuality: string;
   locationPreference: string;
+  hasSocialInsurance: string;  // '有' | '无' | ''
+  hasHousingFund: string;     // '有' | '无' | ''
+  socialInsuranceBase: number; // 五险基数
+  housingFundBase: number;    // 公积金基数
+  hasExtraInsurance: boolean;  // 六险或二金
+
+  // 平台系数
+  growthFactor: string;      // 个人发展空间
+  roleCoreFactor: string;    // 岗位核心程度
+  companySizeFactor: string; // 公司规模
+  overtimeCultureFactor: string; // 加班文化
 
   // 居住方式（影响城市存钱系数）
   housingMode: 'whole' | 'shared';
@@ -89,6 +99,15 @@ export interface FreshGradResult {
     settlement: number;
     newhomeDownPayment: number;
     locationPref: number;
+    laborFactor: number;
+    socialInsuranceFactor: number;
+    housingFundFactor: number;
+    extraInsuranceFactor: number;
+    platformFactor: number;
+    growthFactor: number;
+    roleCoreFactor: number;
+    companySizeFactor: number;
+    overtimeCultureFactor: number;
   };
   timeFactor: number;
   officeRatio: number;
@@ -120,9 +139,6 @@ export type CityIncomeData = Pick<CityCalculationData, 'income' | 'consumption'>
 
 /** 仅包含房价数据的子集 */
 export type CityHousingData = Pick<CityCalculationData, 'secondhandPrice' | 'newhomePrice' | 'wholeRentPrice' | 'sharedRentPrice'>;
-
-/** 完整城市生活数据（历史接口，兼容旧代码） */
-export interface CityLivingData extends CityIncomeData, CityHousingData {}
 
 export interface RatingInfo {
   label: string;

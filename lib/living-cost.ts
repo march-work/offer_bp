@@ -1,7 +1,7 @@
 // ── 城市生活成本计算模块 ──
 // 数据来源：国家统计局 2024 年城镇居民数据 + creprice.cn 2026-03 房价数据
 
-import type { CityLivingData, CityIncomeData, CityHousingData } from './types';
+import type { CityIncomeData, CityHousingData } from './types';
 import {
   getSimpleRating,
   RENT_RATING_CONFIG,

@@ -1,33 +1,18 @@
+// ── 应届生评测器核心计算测试 ──
+
 import {
+  calculateTotalCompensation,
   calculateWorkingDays,
   calculateDailySalary,
-  calculateEnvFactor,
-  calculateEffectiveHours,
   calculateOfficeRatio,
   getShuttleFactor,
-  calculateTotalCompensation,
-  calculateFreshGradScore,
-  getRating,
+  calculateEffectiveHours,
   calculateEducationScore,
   scoreToExpectedAnnualWan,
+  getRating,
+  calculateFreshGradScore,
 } from '../calculate';
-import { CITY_SAVINGS_RATIO, NATIONAL_SAVINGS_RATIO } from '../constants';
-import { CITY_LIVING_DATA } from '../living-cost';
-import type { FreshGradInput } from '../types';
-
-const CITY_SAVINGS_RATE_AVG =
-  Object.values(CITY_SAVINGS_RATIO).reduce((sum, r) => sum + (r - 1) / r, 0) /
-  Object.keys(CITY_SAVINGS_RATIO).length;
-
-// Average savings rate with shared rent housing cost (matches calculate.ts default)
-const CITY_SAVINGS_RATE_WITH_HOUSING_AVG = (() => {
-  let total = 0;
-  for (const data of Object.values(CITY_LIVING_DATA)) {
-    const housingCost = data.sharedRentPrice * 20 * 12;
-    total += (data.income - data.consumption - housingCost) / data.income;
-  }
-  return total / Object.keys(CITY_LIVING_DATA).length;
-})();
+import type { FreshGradInput, CityCalculationData } from '../types';
 
 function createTestInput(overrides: Partial<FreshGradInput> = {}): FreshGradInput {
   return {
@@ -55,7 +40,37 @@ function createTestInput(overrides: Partial<FreshGradInput> = {}): FreshGradInpu
     hasShuttle: false,
     hasCafeteria: false,
     cafeteriaQuality: '普通',
+    hasSocialInsurance: '有',
+    hasHousingFund: '有',
+    socialInsuranceBase: 12500,
+    housingFundBase: 12500,
+    hasExtraInsurance: false,
     housingMode: 'shared' as const,
+    locationPreference: '无所谓',
+    growthFactor: '一般',
+    roleCoreFactor: '一般',
+    companySizeFactor: '中型公司',
+    overtimeCultureFactor: '偶尔加班',
+    ...overrides,
+  };
+}
+
+function createTestCityData(overrides: Partial<CityCalculationData> = {}): CityCalculationData {
+  return {
+    income: 50000,
+    consumption: 32000,
+    savingsRatio: 0.36,
+    secondhandPrice: 1.5,
+    newhomePrice: 1.8,
+    wholeRentPrice: 35,
+    sharedRentPrice: 50,
+    industrySalaries: {
+      '信息传输、软件和信息技术服务专业': 120000,
+      '金融专业': 100000,
+    },
+    nationalIncome: 41314,
+    nationalExpenditure: 28227,
+    nationalSavingsRatio: 1.46,
     ...overrides,
   };
 }
@@ -162,63 +177,14 @@ describe('calculateEffectiveHours', () => {
     expect(calculateEffectiveHours(input, 1.0, 1.0)).toBeCloseTo(9.75);
   });
 
-  it('reduces commute with WFH', () => {
+  it('reduces effective hours with WFH', () => {
     const input = createTestInput({
       dailyWorkHours: 9,
       commuteHours: 2,
       restHours: 1,
     });
-    // 9 + 2 * 0.6 * 1.0 - 0.5 * 1 = 9 + 1.2 - 0.5 = 9.7
-    expect(calculateEffectiveHours(input, 0.6, 1.0)).toBeCloseTo(9.7);
-  });
-});
-
-// ── calculateEnvFactor ──
-describe('calculateEnvFactor', () => {
-  it('uses housing-adjusted savings rate for 成都 shared rent', () => {
-    const input = createTestInput({
-      targetCity: '成都',
-      housingMode: 'shared',
-      workEnvironment: '普通',
-      leaderRelation: '中规中矩',
-      colleagueRelation: '萍水相逢',
-      hasCafeteria: false,
-    });
-    // 成都合租: savings = (income - consumption - housing) / income
-    const cd = CITY_LIVING_DATA['成都']!;
-    const housingCost = cd.sharedRentPrice * 20 * 12;
-    const rate = (cd.income - cd.consumption - housingCost) / cd.income;
-    expect(calculateEnvFactor(input)).toBeCloseTo(rate / CITY_SAVINGS_RATE_WITH_HOUSING_AVG, 4);
-  });
-
-  it('boosts with good environment in 北京 secondhand mortgage', () => {
-    const input = createTestInput({
-      targetCity: '北京',
-      housingMode: 'secondhand',
-      workEnvironment: '高端园区',
-      leaderRelation: '善解人意',
-      colleagueRelation: '亲如一家',
-      hasCafeteria: true,
-      cafeteriaQuality: '丰富且便宜',
-    });
-    const factor = calculateEnvFactor(input);
-    // 北京房价极高，按揭远超收入， envFactor 可能为负
-    expect(typeof factor).toBe('number');
-  });
-
-  it('uses national average for unknown city (no housing data)', () => {
-    const input = createTestInput({
-      targetCity: '未知城市',
-      housingMode: 'shared',
-      workEnvironment: '普通',
-      leaderRelation: '中规中矩',
-      colleagueRelation: '萍水相逢',
-      hasCafeteria: false,
-    });
-    // Fallback: old formula without housing
-    const raw = 1.46;
-    const rate = (raw - 1) / raw;
-    expect(calculateEnvFactor(input)).toBeCloseTo(rate / CITY_SAVINGS_RATE_WITH_HOUSING_AVG);
+    // (9 + 2 * 1.0 - 0.5 * 1) * 0.6 = 10.5 * 0.6 = 6.3
+    expect(calculateEffectiveHours(input, 0.6, 1.0)).toBeCloseTo(6.3);
   });
 });
 
@@ -300,7 +266,8 @@ describe('calculateFreshGradScore', () => {
       monthsPerYear: 14,
       yearEndBonus: 30000,
     });
-    const result = calculateFreshGradScore(input);
+    const cityData = createTestCityData();
+    const result = calculateFreshGradScore(input, cityData);
     expect(result.score).toBeGreaterThan(0);
     expect(result.totalCompensation).toBe(15000 * 14 + 30000);
     expect(result.rating.label).toBeDefined();
@@ -308,8 +275,39 @@ describe('calculateFreshGradScore', () => {
   });
 
   it('produces higher score for higher salary', () => {
-    const low = calculateFreshGradScore(createTestInput({ monthlyBaseSalary: 10000 }));
-    const high = calculateFreshGradScore(createTestInput({ monthlyBaseSalary: 25000 }));
+    const cityData = createTestCityData();
+    const low = calculateFreshGradScore(createTestInput({ monthlyBaseSalary: 10000 }), cityData);
+    const high = calculateFreshGradScore(createTestInput({ monthlyBaseSalary: 25000 }), cityData);
     expect(high.score).toBeGreaterThan(low.score);
+  });
+
+  it('platform factor affects score', () => {
+    const cityData = createTestCityData();
+    const base = calculateFreshGradScore(createTestInput({
+      growthFactor: '一般',
+      roleCoreFactor: '一般',
+      companySizeFactor: '中型公司',
+      overtimeCultureFactor: '偶尔加班',
+    }), cityData);
+    const good = calculateFreshGradScore(createTestInput({
+      growthFactor: '晋升路径清晰',
+      roleCoreFactor: '核心业务线',
+      companySizeFactor: '大厂/行业头部',
+      overtimeCultureFactor: '准点下班',
+    }), cityData);
+    expect(good.score).toBeGreaterThan(base.score);
+  });
+
+  it('worse platform factor lowers score', () => {
+    const cityData = createTestCityData();
+    const base = calculateFreshGradScore(createTestInput({
+      growthFactor: '一般',
+      overtimeCultureFactor: '偶尔加班',
+    }), cityData);
+    const bad = calculateFreshGradScore(createTestInput({
+      growthFactor: '几乎没有',
+      overtimeCultureFactor: '严重内卷',
+    }), cityData);
+    expect(bad.score).toBeLessThan(base.score);
   });
 });

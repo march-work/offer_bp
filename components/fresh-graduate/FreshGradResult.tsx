@@ -115,6 +115,17 @@ export function FreshGradResult({ result, input }: Props) {
                 <CalcLeaf label="定居系数" formula={`min(${(result.totalCompensation * 10).toLocaleString()} / ${result.envFactors.newhomeDownPayment.toLocaleString()}, 3)`} value={result.envFactors.settlement.toFixed(2)} />
               </CalcNode>
               <CalcLeaf label="地点偏好" value={`×${result.envFactors.locationPref.toFixed(2)}`} />
+              <CalcNode label="劳动保障系数" value={`×${result.envFactors.laborFactor.toFixed(2)}`}>
+                <CalcLeaf label="五险系数" value={`×${result.envFactors.socialInsuranceFactor.toFixed(2)}`} />
+                <CalcLeaf label="公积金系数" value={`×${result.envFactors.housingFundFactor.toFixed(2)}`} />
+                <CalcLeaf label="六险二金系数" value={`×${result.envFactors.extraInsuranceFactor.toFixed(1)}`} />
+              </CalcNode>
+              <CalcNode label="平台系数" value={`×${result.envFactors.platformFactor.toFixed(4)}`}>
+                <CalcLeaf label="个人发展空间" value={`×${result.envFactors.growthFactor.toFixed(2)}`} />
+                <CalcLeaf label="岗位核心程度" value={`×${result.envFactors.roleCoreFactor.toFixed(2)}`} />
+                <CalcLeaf label="公司规模" value={`×${result.envFactors.companySizeFactor.toFixed(2)}`} />
+                <CalcLeaf label="加班文化" value={`÷${result.envFactors.overtimeCultureFactor.toFixed(2)}`} />
+              </CalcNode>
             </CalcNode>
           </CalcNode>
 
@@ -247,10 +258,12 @@ function CalcLeaf({
   value?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-2 text-[11px] text-gray-500 py-1 px-2 ml-4">
-      <span className="shrink-0">{label}</span>
-      {formula && <span className="font-mono text-gray-400 truncate text-center flex-1">{formula}</span>}
-      {value && <span className="font-mono text-gray-600 shrink-0">{value}</span>}
+    <div className="text-[11px] text-gray-500 py-1 px-2 ml-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="shrink-0">{label}</span>
+        {value && <span className="font-mono text-gray-600 shrink-0">{value}</span>}
+      </div>
+      {formula && <div className="font-mono text-gray-400 break-all mt-0.5">{formula}</div>}
     </div>
   );
 }
