@@ -11,13 +11,8 @@ import {
   LEADER_OPTIONS,
   COLLEAGUE_OPTIONS,
   CAFETERIA_OPTIONS,
-  MONTHS_PER_YEAR_OPTIONS,
-  ALLOWANCE_OPTIONS,
-  WORK_DAYS_OPTIONS,
+  LOCATION_PREF_OPTIONS,
   WFH_DAYS_OPTIONS,
-  DAILY_HOURS_OPTIONS,
-  COMMUTE_HOURS_OPTIONS,
-  REST_HOURS_OPTIONS,
 } from '@/lib/constants';
 import { calculateTotalCompensation } from '@/lib/calculate';
 
@@ -25,9 +20,11 @@ interface Props {
   input: FreshGradInput;
   onChange: (field: keyof FreshGradInput, value: FreshGradInput[keyof FreshGradInput]) => void;
   onCalculate: () => void;
+  districts: string[];
+  dataLoading: boolean;
 }
 
-export function FreshGradForm({ input, onChange, onCalculate }: Props) {
+export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoading }: Props) {
   return (
     <div className="space-y-4">
       {/* ── 学历 ── */}
@@ -45,18 +42,34 @@ export function FreshGradForm({ input, onChange, onCalculate }: Props) {
       </FormSection>
 
       {/* ── 城市 & 行业 ── */}
-      <FormSection title="目标" icon="🎯">
+      <FormSection title="Offer 地点" icon="🎯">
         <SelectField
-          label="目标城市"
+          label="Offer城市"
           value={input.targetCity}
           options={CITY_OPTIONS}
           onChange={(v) => onChange('targetCity', v)}
         />
+        {districts.length > 0 && (
+          <SelectField
+            label="Offer区县"
+            value={input.targetDistrict ?? ''}
+            options={['', ...districts]}
+            onChange={(v) => onChange('targetDistrict', v)}
+            disabled={dataLoading}
+            hint={input.targetDistrict ? undefined : '不选则用城市均价'}
+          />
+        )}
         <SelectField
-          label="目标行业"
+          label="你的专业"
           value={input.targetIndustry}
           options={INDUSTRY_OPTIONS}
           onChange={(v) => onChange('targetIndustry', v)}
+        />
+        <SelectField
+          label="地点偏好"
+          value={input.locationPreference}
+          options={LOCATION_PREF_OPTIONS}
+          onChange={(v) => onChange('locationPreference', v)}
         />
       </FormSection>
 
@@ -70,12 +83,14 @@ export function FreshGradForm({ input, onChange, onCalculate }: Props) {
           step={1000}
           placeholder="如 18000"
         />
-        <SelectField
+        <NumberField
           label="一年发几个月"
           value={input.monthsPerYear}
-          options={MONTHS_PER_YEAR_OPTIONS}
           onChange={(v) => onChange('monthsPerYear', v)}
-          hint={`${input.monthsPerYear}薪`}
+          min={1}
+          max={36}
+          step={0.5}
+          placeholder="默认 12"
         />
         <NumberField
           label="额外年终奖（元）"
@@ -93,11 +108,13 @@ export function FreshGradForm({ input, onChange, onCalculate }: Props) {
           step={1}
           placeholder="如 10，无则填 0"
         />
-        <SelectField
+        <NumberField
           label="月补贴（元/月）"
           value={input.monthlyAllowance}
-          options={ALLOWANCE_OPTIONS}
           onChange={(v) => onChange('monthlyAllowance', v)}
+          min={0}
+          step={100}
+          placeholder="如 500，无则填 0"
         />
         <TCPreview input={input} />
       </FormSection>
@@ -105,11 +122,14 @@ export function FreshGradForm({ input, onChange, onCalculate }: Props) {
       {/* ── 工时 ── */}
       <FormSection title="工作条件" icon="⏰">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-          <SelectField
+          <NumberField
             label="每周工作天数"
             value={input.workDaysPerWeek}
-            options={WORK_DAYS_OPTIONS}
             onChange={(v) => onChange('workDaysPerWeek', v)}
+            min={1}
+            max={7}
+            step={0.5}
+            placeholder="默认 5"
           />
           <SelectField
             label="WFH 天数/周"
@@ -141,26 +161,29 @@ export function FreshGradForm({ input, onChange, onCalculate }: Props) {
         </div>
         <hr className="border-gray-100 my-2" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-          <SelectField
-            label="日均工时"
+          <NumberField
+            label="日均工时（小时）"
             value={input.dailyWorkHours}
-            options={DAILY_HOURS_OPTIONS}
             onChange={(v) => onChange('dailyWorkHours', v)}
-            suffix="h"
+            min={1}
+            max={24}
+            step={0.5}
           />
-          <SelectField
-            label="每日通勤"
-            value={input.commuteHours}
-            options={COMMUTE_HOURS_OPTIONS}
-            onChange={(v) => onChange('commuteHours', v)}
-            suffix="h"
+          <NumberField
+            label="每日通勤（分钟）"
+            value={input.commuteHours * 60}
+            onChange={(v) => onChange('commuteHours', v / 60)}
+            min={0}
+            max={180}
+            step={5}
           />
-          <SelectField
-            label="休息时间"
+          <NumberField
+            label="休息时间（小时）"
             value={input.restHours}
-            options={REST_HOURS_OPTIONS}
             onChange={(v) => onChange('restHours', v)}
-            suffix="h"
+            min={0}
+            max={8}
+            step={0.5}
           />
         </div>
       </FormSection>

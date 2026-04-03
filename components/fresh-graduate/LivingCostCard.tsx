@@ -15,6 +15,8 @@ interface Props {
   annualSalary: number;
   value: 'newhome' | 'secondhand' | 'whole' | 'shared';
   onChange: (mode: 'newhome' | 'secondhand' | 'whole' | 'shared') => void;
+  housingData?: { secondhandPrice: number; newhomePrice: number; wholeRentPrice: number; sharedRentPrice: number };
+  incomeData?: { income: number; consumption: number };
 }
 
 function getRentBarColor(ratio: number): string {
@@ -40,12 +42,12 @@ const SUB_OPTIONS: { value: LivingSubMode; label: string }[] = [
   { value: 'shared', label: '合租' },
 ];
 
-export function LivingCostCard({ cityName, annualSalary, value, onChange }: Props) {
+export function LivingCostCard({ cityName, annualSalary, value, onChange, housingData, incomeData }: Props) {
   const subMode = value;
 
   const result = useMemo(
-    () => calculateLivingCost(cityName, annualSalary),
-    [cityName, annualSalary],
+    () => calculateLivingCost(cityName, annualSalary, housingData, incomeData),
+    [cityName, annualSalary, housingData, incomeData],
   );
 
   if (annualSalary <= 0) {
@@ -81,13 +83,20 @@ export function LivingCostCard({ cityName, annualSalary, value, onChange }: Prop
       </div>
 
       {/* 收入对比 */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="bg-gray-50 rounded-lg p-3 text-center">
           <div className="text-xs text-gray-500 mb-1">城市人均收入</div>
           <div className="text-lg font-semibold text-gray-900">
             ¥{result.cityAvgIncome.toLocaleString()}
           </div>
-          <div className="text-xs text-gray-400">/年（2024 年数据）</div>
+          <div className="text-xs text-gray-400">/年</div>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <div className="text-xs text-gray-500 mb-1">城市人均支出</div>
+          <div className="text-lg font-semibold text-gray-900">
+            ¥{result.cityAvgConsumption.toLocaleString()}
+          </div>
+          <div className="text-xs text-gray-400">/年</div>
         </div>
         <div className="bg-gray-50 rounded-lg p-3 text-center">
           <div className="text-xs text-gray-500 mb-1">收入排名估计</div>

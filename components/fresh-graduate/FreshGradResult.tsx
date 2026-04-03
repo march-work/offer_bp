@@ -1,12 +1,14 @@
 'use client';
 
-import type { FreshGradResult } from '@/lib/types';
+import { useState } from 'react';
+import type { FreshGradResult, FreshGradInput } from '@/lib/types';
 
 interface Props {
   result: FreshGradResult | null;
+  input?: FreshGradInput;
 }
 
-export function FreshGradResult({ result }: Props) {
+export function FreshGradResult({ result, input }: Props) {
   if (!result) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
@@ -39,7 +41,7 @@ export function FreshGradResult({ result }: Props) {
         <h4 className="text-sm font-semibold text-gray-700 mb-3">薪资对比</h4>
         <div className="grid grid-cols-2 gap-4">
           <MetricBox
-            label="你的 TC（年总包）"
+            label="你的总年包（新人）"
             value={`${(result.totalCompensation / 10000).toFixed(1)}万`}
             sub={`日薪 ¥${(result.totalCompensation / result.workingDays).toFixed(0)}`}
           />
@@ -66,25 +68,94 @@ export function FreshGradResult({ result }: Props) {
         </div>
       </div>
 
-      {/* 因子拆解 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">因子拆解</h4>
-        <div className="space-y-2 text-sm">
-          <FactorRow label="年工作日" value={`${result.workingDays.toFixed(1)} 天`} />
-          <FactorRow label="环境系数" value={result.envFactor.toFixed(4)} />
-          <FactorRow label="有效工时" value={`${result.effectiveHours.toFixed(2)} h/天`} />
-          <FactorRow label="办公室比例" value={`${(result.officeRatio * 100).toFixed(0)}%`} />
-        </div>
-      </div>
-
       {/* 公式说明 */}
-      <div className="hidden sm:block bg-gray-50 rounded-xl border border-gray-200 p-4">
-        <p className="text-xs text-gray-400 font-mono leading-relaxed">
-          Score = (日薪 × 环境系数 × 8) / (期望日薪 × 有效工时)<br />
-          = ({result.dailySalary.toFixed(0)} × {result.envFactor.toFixed(4)} × 8)<br />
-          &nbsp;&nbsp;/ ({result.expectedDailySalary.toFixed(0)} × {result.effectiveHours.toFixed(2)})<br />
-          = <span className="text-gray-600 font-bold">{result.score.toFixed(2)}</span>
-        </p>
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mb-4">
+          <span className="inline-block w-4 h-px bg-gray-300" />
+          <span>计算过程</span>
+          <span className="inline-block w-4 h-px bg-gray-300" />
+        </div>
+
+        <div className="bg-gray-50 rounded-lg divide-y divide-gray-200">
+          {/* 分子 */}
+          <CalcNode
+            label="日薪 × 环境系数"
+            value={`${result.dailySalary.toFixed(0)} × ${result.envFactor.toFixed(2)} = ${(result.dailySalary * result.envFactor).toFixed(0)}`}
+          >
+            <CalcNode
+              label="日薪"
+              value={`¥${result.dailySalary.toFixed(0)}`}
+            >
+              <CalcLeaf label="年总包 TC" formula={`${input?.monthlyBaseSalary ?? 0} × ${input?.monthsPerYear ?? 12} + ${(input?.yearEndBonus ?? 0).toLocaleString()} + ${(input?.annualStock ?? 0)}万 + ${(input?.monthlyAllowance ?? 0) * 12}`} value={`${result.totalCompensation.toLocaleString()} 元`} />
+              <CalcNode label="年工作日" value={`${result.workingDays.toFixed(1)} 天`}>
+                <CalcLeaf label="周数 × 工作天数" formula={`52 × ${input?.workDaysPerWeek ?? 5}`} value={`= ${(52 * (input?.workDaysPerWeek ?? 5)).toFixed(0)}`} />
+                <CalcLeaf label="− 年假" value={`${input?.annualLeave ?? 0} 天`} />
+                <CalcLeaf label="− 法定假日" value={`${input?.publicHolidays ?? 0} 天`} />
+                <CalcLeaf label="− 带薪病假 × 0.6" formula={`${input?.paidSickLeave ?? 0} × 0.6`} value={`${((input?.paidSickLeave ?? 0) * 0.6).toFixed(1)} 天`} />
+              </CalcNode>
+              <CalcLeaf label="日薪" formula={`${result.totalCompensation.toLocaleString()} / ${result.workingDays.toFixed(1)}`} value={`¥${result.dailySalary.toFixed(0)}`} />
+            </CalcNode>
+            <CalcNode
+              label="环境系数"
+              value={result.envFactor.toFixed(4)}
+            >
+              <CalcLeaf label="办公环境" value={`×${result.envFactors.workEnv.toFixed(2)}`} />
+              <CalcLeaf label="领导关系" value={`×${result.envFactors.leader.toFixed(2)}`} />
+              <CalcLeaf label="同事关系" value={`×${result.envFactors.colleague.toFixed(2)}`} />
+              <CalcLeaf label="食堂系数" value={`×${result.envFactors.cafeteria.toFixed(2)}`} />
+              <CalcNode label="城市储蓄系数" value={`×${result.envFactors.citySavings.toFixed(4)}`}>
+                <CalcLeaf label="城市人均收入" value={`¥${result.envFactors.cityIncome.toLocaleString()}`} />
+                <CalcLeaf label="城市人均支出 × 0.7" formula={`${result.envFactors.cityConsumption.toLocaleString()} × 0.7`} value={`¥${(result.envFactors.cityConsumption * 0.7).toLocaleString()}`} />
+                <CalcLeaf label="年居住成本" value={`¥${result.envFactors.annualHousingCost.toLocaleString()}`} />
+                <CalcLeaf label="储蓄率" formula={`(${result.envFactors.cityIncome.toLocaleString()} − ${(result.envFactors.cityConsumption * 0.7).toLocaleString()} − ${result.envFactors.annualHousingCost.toLocaleString()}) / ${result.envFactors.cityIncome.toLocaleString()}`} value={`${(result.envFactors.savingsRate * 100).toFixed(1)}%`} />
+              </CalcNode>
+              <CalcNode label="定居系数" value={`×${result.envFactors.settlement.toFixed(2)}`}>
+                <CalcLeaf label="10 年收入" value={`¥${(result.totalCompensation * 10).toLocaleString()}`} />
+                <CalcLeaf label="新房 90㎡ 首付 (30%)" value={`¥${result.envFactors.newhomeDownPayment.toLocaleString()}`} />
+                <CalcLeaf label="定居系数" formula={`min(${(result.totalCompensation * 10).toLocaleString()} / ${result.envFactors.newhomeDownPayment.toLocaleString()}, 3)`} value={result.envFactors.settlement.toFixed(2)} />
+              </CalcNode>
+              <CalcLeaf label="地点偏好" value={`×${result.envFactors.locationPref.toFixed(2)}`} />
+            </CalcNode>
+          </CalcNode>
+
+          {/* 分母 */}
+          <CalcNode
+            label="期望日薪 × timeFactor"
+            value={`${result.expectedDailySalary.toFixed(0)} × ${result.timeFactor.toFixed(2)} = ${(result.expectedDailySalary * result.timeFactor).toFixed(0)}`}
+          >
+            <CalcNode
+              label="期望日薪"
+              value={`¥${result.expectedDailySalary.toFixed(0)}`}
+            >
+              <CalcNode label="学历分值" value={result.educationScore.toFixed(2)}>
+                <CalcLeaf label="本科" value={input?.bachelorLevel ?? '-'} />
+                <CalcLeaf label="硕士" value={input?.masterLevel ?? '-'} />
+                <CalcLeaf label="博士" value={input?.phdLevel ?? '-'} />
+              </CalcNode>
+              <CalcLeaf label="行业因子" value={result.industryFactor.toFixed(2)} />
+              <CalcLeaf label="期望年薪" formula={`${result.educationScore.toFixed(2)} × ${result.industryFactor.toFixed(2)}`} value={`${(result.expectedAnnualSalary / 10000).toFixed(1)}万`} />
+              <CalcLeaf label="期望日薪" formula={`${(result.expectedAnnualSalary).toLocaleString()} / 260`} value={`¥${result.expectedDailySalary.toFixed(0)}`} />
+            </CalcNode>
+            <CalcNode
+              label="timeFactor"
+              value={result.timeFactor.toFixed(2)}
+            >
+              <CalcNode label="有效工时" value={`${result.effectiveHours.toFixed(2)} h`}>
+                <CalcLeaf label="日均工时" value={`${input?.dailyWorkHours ?? 8} h`} />
+                <CalcLeaf label="通勤" formula={`${(input?.commuteHours ?? 0) * 60}min × ${result.shuttleFactor}`} />
+                <CalcLeaf label="− 0.5 × 休息时间" formula={`0.5 × ${input?.restHours ?? 0}`} />
+                <CalcLeaf label="× 办公室比例" value={`${(result.officeRatio * 100).toFixed(0)}%`} />
+              </CalcNode>
+              <CalcNode label="办公室比例" value={`${(result.officeRatio * 100).toFixed(0)}%`}>
+                <CalcLeaf label="每周工作" value={`${input?.workDaysPerWeek ?? 5} 天`} />
+                <CalcLeaf label="WFH" value={`${input?.wfhDaysPerWeek ?? 0} 天`} />
+                <CalcLeaf label="公式" formula={`(${input?.workDaysPerWeek ?? 5} − ${input?.wfhDaysPerWeek ?? 0}) / ${input?.workDaysPerWeek ?? 5}`} value={`${(result.officeRatio * 100).toFixed(0)}%`} />
+              </CalcNode>
+              <CalcLeaf label="班车系数" value={result.shuttleFactor.toFixed(1)} />
+              <CalcLeaf label="timeFactor" formula={`${result.effectiveHours.toFixed(2)} / 8`} value={result.timeFactor.toFixed(2)} />
+            </CalcNode>
+          </CalcNode>
+        </div>
       </div>
     </div>
   );
@@ -132,11 +203,55 @@ function SalaryBar({ actual, expected, label }: { actual: number; expected: numb
   );
 }
 
-function FactorRow({ label, value }: { label: string; value: string }) {
+/** 可展开的计算节点（支持无限嵌套） */
+function CalcNode({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value: string;
+  children?: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0">
-      <span className="text-gray-500">{label}</span>
-      <span className="font-mono text-gray-900">{value}</span>
+    <div className="pl-3 border-l-2 border-gray-200 ml-1">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full py-2 flex items-center justify-between text-left hover:bg-gray-100 rounded transition-colors px-2"
+      >
+        <span className="text-xs text-gray-600 flex items-center gap-1.5 font-medium">
+          <span className={`text-[10px] text-gray-400 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}>▶</span>
+          {label}
+        </span>
+        <span className="text-sm font-mono text-gray-700">{value}</span>
+      </button>
+      {open && children && (
+        <div className="pb-2">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
+
+/** 叶子节点（不可展开，显示公式和值） */
+function CalcLeaf({
+  label,
+  formula,
+  value,
+}: {
+  label: string;
+  formula?: string;
+  value?: string;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 text-[11px] text-gray-500 py-1 px-2 ml-4">
+      <span className="shrink-0">{label}</span>
+      {formula && <span className="font-mono text-gray-400 truncate text-center flex-1">{formula}</span>}
+      {value && <span className="font-mono text-gray-600 shrink-0">{value}</span>}
+    </div>
+  );
+}
+

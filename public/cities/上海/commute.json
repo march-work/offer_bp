@@ -1,0 +1,11 @@
+{
+  "city": "上海",
+  "year": 2024,
+  "one_way_average_commute_time": 45,
+  "time_unit": "minutes",
+  "commute_ratios": {
+    "extreme_commute": 0.24,
+    "happy_commute": 0.52
+  },
+  "source": "中国城市规划设计研究院《2025年中国主要城市通勤监测报告》"
+}

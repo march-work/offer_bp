@@ -2,9 +2,6 @@
 
 import type { CityTier, RatingInfo } from './types';
 
-// ── PPP 因子（中国大陆）──
-export const PPP_FACTOR_CHINA = 4.19;
-
 // ── 标准年工作日基准 ──
 export const STANDARD_WORKING_DAYS = 260;
 export const STANDARD_HOURS = 8;
@@ -86,25 +83,9 @@ export const CITY_SALARY_FACTOR: Record<string, number> = {
   '三线及以下': 0.70,
 };
 
-// ── 城市综合存钱系数 ──
-// 数据来源：各市统计局《国民经济和社会发展统计公报》
+// ── 全国平均存钱系数 ──
+// 数据来源：国家统计局 2024 年
 // 系数 = 全体居民人均可支配收入 / 全体居民人均消费支出
-// 反映该城市"赚得多、花得少"的综合挣钱存钱能力
-export const CITY_SAVINGS_RATIO: Record<string, number> = {
-  '北京': 1.76,   // 89090 / 50667 (2025年)
-  '上海': 1.68,   // 91987 / 54765 (2025年)
-  '深圳': 1.58,   // 81123 / 51415 (2024年)
-  '广州': 1.61,   // 城镇 83436 / 50496 (2024年)
-  '杭州': 1.44,   // 80017 / 55592 (2025年)
-  '南京': 1.69,   // 75180 / 44578 (2024年)
-  '成都': 1.44,   // 52024 / ~36200 (2024年)
-  '武汉': 1.51,   // 59732 / 39625 (2024年)
-  '西安': 1.59,   // 45082 / 28314 (2024年)
-  '合肥': 1.72,   // 55832 / 32442 (2024年)
-  '青岛': 1.64,   // 59922 / 36450 (2024年)
-};
-
-// 全国平均存钱系数：41314 / 28227 (2024年国家统计局)
 export const NATIONAL_SAVINGS_RATIO = 1.46;
 
 // ── 行业系数（仅用于无真实数据时的兜底）──
@@ -152,6 +133,12 @@ export const CAFETERIA_FACTOR: Record<string, number> = {
   '无食堂': 1.0,
 };
 
+export const LOCATION_PREF_FACTOR: Record<string, number> = {
+  '喜欢/离家近': 1.1,
+  '无所谓': 1.0,
+  '不太满意/有点远': 0.9,
+};
+
 // ── 评级体系 ──
 export const RATINGS: { max: number; info: RatingInfo }[] = [
   { max: 0.5, info: { label: '大冤种', color: 'text-pink-800', colorHex: '#9d174d', description: '严重低于市场，快跑！' } },
@@ -162,6 +149,57 @@ export const RATINGS: { max: number; info: RatingInfo }[] = [
   { max: 1.6, info: { label: '很香', color: 'text-purple-500', colorHex: '#a855f7', description: '远超期望' } },
   { max: Infinity, info: { label: '天选 Offer', color: 'text-yellow-500', colorHex: '#eab308', description: '顶级 offer！' } },
 ];
+
+// ── 通用评级工具 ──
+
+interface SimpleRating {
+  label: string;
+  color: string;
+}
+
+type RatingConfig<T> = { thresholds: number[]; labels: string[]; colors: string[]; defaultValue?: T };
+
+/**
+ * 通用评级函数：根据值和阈值配置返回评级
+ * @param value 要评级的值
+ * @param config 评级配置（阈值从小到大排列，labels 和 colors 对应）
+ * @returns 评级结果
+ */
+export function getSimpleRating(
+  value: number,
+  config: { thresholds: number[]; labels: string[]; colors: string[] }
+): SimpleRating {
+  const { thresholds, labels, colors } = config;
+  for (let i = 0; i < thresholds.length; i++) {
+    if (value < thresholds[i]) {
+      return { label: labels[i], color: colors[i] };
+    }
+  }
+  return { label: labels[labels.length - 1], color: colors[colors.length - 1] };
+}
+
+// ── 预设评级配置 ──
+
+/** 租房收入比评级配置 */
+export const RENT_RATING_CONFIG = {
+  thresholds: [0.25, 0.35, 0.5],
+  labels: ['轻松', '合理', '偏高', '沉重'],
+  colors: ['text-green-500', 'text-blue-500', 'text-orange-400', 'text-red-500'],
+};
+
+/** 买房总价收入比评级配置 */
+export const BUY_RATING_CONFIG = {
+  thresholds: [6, 10, 15],
+  labels: ['轻松', '合理', '偏高', '沉重'],
+  colors: ['text-green-500', 'text-blue-500', 'text-orange-400', 'text-red-500'],
+};
+
+/** 居住压力指数评级配置 */
+export const PRESSURE_RATING_CONFIG = {
+  thresholds: [0.5, 0.8, 1.2],
+  labels: ['轻松', '合理', '偏高', '沉重'],
+  colors: ['text-green-500', 'text-blue-500', 'text-orange-400', 'text-red-500'],
+};
 
 // ── 表单选项 ──
 export const INDUSTRY_OPTIONS = [
@@ -191,6 +229,7 @@ export const WORK_ENV_OPTIONS = ['高端园区', 'CBD/甲级写字楼', '普通'
 export const LEADER_OPTIONS = ['善解人意', '比较好', '中规中矩', '比较坑', '简直噩梦'] as const;
 export const COLLEAGUE_OPTIONS = ['亲如一家', '和和睦睦', '萍水相逢', '勾勾搭角', '乌烟瘴气'] as const;
 export const CAFETERIA_OPTIONS = ['丰富且便宜', '不错', '普通', '较差'] as const;
+export const LOCATION_PREF_OPTIONS = ['喜欢/离家近', '无所谓', '不太满意/有点远'] as const;
 
 export const MONTHS_PER_YEAR_OPTIONS = [12, 13, 14, 15, 16, 18, 20, 24] as const;
 export const ALLOWANCE_OPTIONS = [0, 500, 800, 1000, 1500, 2000, 2500, 3000, 4000, 5000] as const;
