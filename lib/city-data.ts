@@ -169,15 +169,19 @@ export function getDistrictNames(housing: HousingJson): string[] {
 }
 
 /** 获取某区县的房价数据，null 表示该区县无数据 */
-export function getDistrictHousing(housing: HousingJson, district: string): HousingPrices | null {
+export function getDistrictHousing(
+  housing: HousingJson,
+  district: string,
+  cityAvg?: HousingPrices,
+): HousingPrices | null {
   const d = housing.districts[district];
   if (!d) return null;
-  const cityAvg = computeCityAverageHousing(housing);
+  const avg = cityAvg ?? computeCityAverageHousing(housing);
   return {
-    secondhandPrice: normalizePrice(d.secondhand, false) ?? cityAvg.secondhandPrice,
-    newhomePrice: normalizePrice(d.newhome, false) ?? cityAvg.newhomePrice,
-    wholeRentPrice: normalizePrice(d.whole_rent, true) ?? cityAvg.wholeRentPrice,
-    sharedRentPrice: normalizePrice(d.shared_rent, true) ?? cityAvg.sharedRentPrice,
+    secondhandPrice: normalizePrice(d.secondhand, false) ?? avg.secondhandPrice,
+    newhomePrice: normalizePrice(d.newhome, false) ?? avg.newhomePrice,
+    wholeRentPrice: normalizePrice(d.whole_rent, true) ?? avg.wholeRentPrice,
+    sharedRentPrice: normalizePrice(d.shared_rent, true) ?? avg.sharedRentPrice,
   };
 }
 

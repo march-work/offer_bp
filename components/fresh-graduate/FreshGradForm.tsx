@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import type { FreshGradInput } from '@/lib/types';
+import type { EvalMode } from '@/app/fresh-graduate/page';
 import {
   BACHELOR_OPTIONS,
   MASTER_OPTIONS,
@@ -9,8 +10,6 @@ import {
   CITY_OPTIONS,
   INDUSTRY_OPTIONS,
   WORK_ENV_OPTIONS,
-  LEADER_OPTIONS,
-  COLLEAGUE_OPTIONS,
   CAFETERIA_OPTIONS,
   LOCATION_PREF_OPTIONS,
   WFH_DAYS_OPTIONS,
@@ -18,8 +17,13 @@ import {
   ROLE_CORE_OPTIONS,
   COMPANY_SIZE_OPTIONS,
   OVERTIME_CULTURE_OPTIONS,
+  SALARY_PAYMENT_OPTIONS,
 } from '@/lib/constants';
 import { calculateTotalCompensation } from '@/lib/calculate';
+import { FormSection } from '@/components/ui/FormSection';
+import { SelectField } from '@/components/ui/SelectField';
+import { NumberField } from '@/components/ui/NumberField';
+import { CheckboxField } from '@/components/ui/CheckboxField';
 
 interface Props {
   input: FreshGradInput;
@@ -27,10 +31,12 @@ interface Props {
   onCalculate: () => void;
   districts: string[];
   dataLoading: boolean;
+  mode: EvalMode;
 }
 
-export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoading }: Props) {
+export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoading, mode }: Props) {
   const housingFundManuallyEdited = useRef(false);
+  const isQuick = mode === 'quick';
 
   return (
     <div className="space-y-4">
@@ -72,12 +78,14 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           options={INDUSTRY_OPTIONS}
           onChange={(v) => onChange('targetIndustry', v)}
         />
-        <SelectField
-          label="地点偏好"
-          value={input.locationPreference}
-          options={LOCATION_PREF_OPTIONS}
-          onChange={(v) => onChange('locationPreference', v)}
-        />
+        {!isQuick && (
+          <SelectField
+            label="地点偏好"
+            value={input.locationPreference}
+            options={LOCATION_PREF_OPTIONS}
+            onChange={(v) => onChange('locationPreference', v)}
+          />
+        )}
       </FormSection>
 
       {/* ── 薪资 ── */}
@@ -107,22 +115,26 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           step={1000}
           placeholder="额外的年终奖金额，无则填 0"
         />
-        <NumberField
-          label="股票/期权（万元/年）"
-          value={input.annualStock}
-          onChange={(v) => onChange('annualStock', v)}
-          min={0}
-          step={1}
-          placeholder="如 10，无则填 0"
-        />
-        <NumberField
-          label="月补贴（元/月）"
-          value={input.monthlyAllowance}
-          onChange={(v) => onChange('monthlyAllowance', v)}
-          min={0}
-          step={100}
-          placeholder="如 500，无则填 0"
-        />
+        {!isQuick && (
+          <NumberField
+            label="股票/期权（万元/年）"
+            value={input.annualStock}
+            onChange={(v) => onChange('annualStock', v)}
+            min={0}
+            step={1}
+            placeholder="如 10，无则填 0"
+          />
+        )}
+        {!isQuick && (
+          <NumberField
+            label="月补贴（元/月）"
+            value={input.monthlyAllowance}
+            onChange={(v) => onChange('monthlyAllowance', v)}
+            min={0}
+            step={100}
+            placeholder="如 500，无则填 0"
+          />
+        )}
         <TCPreview input={input} />
         <div className="grid grid-cols-2 gap-x-4">
           <SelectField
@@ -183,11 +195,19 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
             placeholder="默认等于五险基数"
           />
         )}
-        {(input.hasSocialInsurance === '有' || input.hasHousingFund === '有') && (
+        {!isQuick && (input.hasSocialInsurance === '有' || input.hasHousingFund === '有') && (
           <CheckboxField
             label="有六险或二金"
             checked={input.hasExtraInsurance}
             onChange={(v) => onChange('hasExtraInsurance', v)}
+          />
+        )}
+        {!isQuick && (
+          <SelectField
+            label="工资发放时间"
+            value={input.salaryPaymentTiming}
+            options={SALARY_PAYMENT_OPTIONS}
+            onChange={(v) => onChange('salaryPaymentTiming', v)}
           />
         )}
       </FormSection>
@@ -204,12 +224,14 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
             step={0.5}
             placeholder="默认 5"
           />
-          <SelectField
-            label="WFH 天数/周"
-            value={input.wfhDaysPerWeek}
-            options={WFH_DAYS_OPTIONS.filter((d) => d <= input.workDaysPerWeek)}
-            onChange={(v) => onChange('wfhDaysPerWeek', v)}
-          />
+          {!isQuick && (
+            <SelectField
+              label="WFH 天数/周"
+              value={input.wfhDaysPerWeek}
+              options={WFH_DAYS_OPTIONS.filter((d) => d <= input.workDaysPerWeek)}
+              onChange={(v) => onChange('wfhDaysPerWeek', v)}
+            />
+          )}
           <NumberField
             label="年假（天）"
             value={input.annualLeave}
@@ -217,20 +239,24 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
             min={0}
             max={30}
           />
-          <NumberField
-            label="法定假日（天）"
-            value={input.publicHolidays}
-            onChange={(v) => onChange('publicHolidays', v)}
-            min={0}
-            max={20}
-          />
-          <NumberField
-            label="带薪病假（天）"
-            value={input.paidSickLeave}
-            onChange={(v) => onChange('paidSickLeave', v)}
-            min={0}
-            max={15}
-          />
+          {!isQuick && (
+            <NumberField
+              label="法定假日（天）"
+              value={input.publicHolidays}
+              onChange={(v) => onChange('publicHolidays', v)}
+              min={0}
+              max={20}
+            />
+          )}
+          {!isQuick && (
+            <NumberField
+              label="带薪病假（天）"
+              value={input.paidSickLeave}
+              onChange={(v) => onChange('paidSickLeave', v)}
+              min={0}
+              max={15}
+            />
+          )}
         </div>
         <hr className="border-gray-100 my-2" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
@@ -242,14 +268,16 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
             max={24}
             step={0.5}
           />
-          <NumberField
-            label="每日通勤（分钟）"
-            value={input.commuteHours * 60}
-            onChange={(v) => onChange('commuteHours', v / 60)}
-            min={0}
-            max={180}
-            step={5}
-          />
+          {!isQuick && (
+            <NumberField
+              label="每日通勤（分钟）"
+              value={input.commuteHours * 60}
+              onChange={(v) => onChange('commuteHours', v / 60)}
+              min={0}
+              max={180}
+              step={5}
+            />
+          )}
           <NumberField
             label="休息时间（小时）"
             value={input.restHours}
@@ -268,18 +296,6 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           value={input.workEnvironment}
           options={WORK_ENV_OPTIONS}
           onChange={(v) => onChange('workEnvironment', v)}
-        />
-        <SelectField
-          label="领导关系"
-          value={input.leaderRelation}
-          options={LEADER_OPTIONS}
-          onChange={(v) => onChange('leaderRelation', v)}
-        />
-        <SelectField
-          label="同事关系"
-          value={input.colleagueRelation}
-          options={COLLEAGUE_OPTIONS}
-          onChange={(v) => onChange('colleagueRelation', v)}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
           <CheckboxField
@@ -305,18 +321,22 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
 
       {/* ── 平台系数 ── */}
       <FormSection title="平台系数" icon="📈">
-        <SelectField
-          label="个人发展空间"
-          value={input.growthFactor}
-          options={GROWTH_OPTIONS}
-          onChange={(v) => onChange('growthFactor', v)}
-        />
-        <SelectField
-          label="岗位核心程度"
-          value={input.roleCoreFactor}
-          options={ROLE_CORE_OPTIONS}
-          onChange={(v) => onChange('roleCoreFactor', v)}
-        />
+        {!isQuick && (
+          <SelectField
+            label="个人发展空间"
+            value={input.growthFactor}
+            options={GROWTH_OPTIONS}
+            onChange={(v) => onChange('growthFactor', v)}
+          />
+        )}
+        {!isQuick && (
+          <SelectField
+            label="岗位核心程度"
+            value={input.roleCoreFactor}
+            options={ROLE_CORE_OPTIONS}
+            onChange={(v) => onChange('roleCoreFactor', v)}
+          />
+        )}
         <SelectField
           label="公司规模"
           value={input.companySizeFactor}
@@ -521,123 +541,6 @@ function EducationSelector({
         )}
       </div>
     </div>
-  );
-}
-
-// ── 通用子组件 ──
-function FormSection({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-        <span>{icon}</span>
-        {title}
-      </h3>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-}
-
-function SelectField<T extends string | number>({
-  label,
-  value,
-  options,
-  onChange,
-  suffix,
-  hint,
-  disabled,
-  placeholder,
-}: {
-  label: string;
-  value: T;
-  options: readonly T[];
-  onChange: (value: T) => void;
-  suffix?: string;
-  hint?: string;
-  disabled?: boolean;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-xs text-gray-500 mb-1">
-        {label}
-        {hint && <span className="ml-1 text-gray-400">({hint})</span>}
-      </label>
-      <select
-        value={String(value)}
-        onChange={(e) => {
-          const raw = e.target.value;
-          const parsed = typeof value === 'number' ? (Number(raw) as T) : (raw as T);
-          onChange(parsed);
-        }}
-        disabled={disabled}
-        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
-      >
-        {placeholder && (
-          <option value="" disabled>{placeholder}</option>
-        )}
-        {options.map((opt) => (
-          <option key={String(opt)} value={String(opt)}>
-            {String(opt)}{suffix ?? ''}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  onChange,
-  min,
-  max,
-  step,
-  placeholder,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
-      <input
-        type="number"
-        value={value || ''}
-        onChange={(e) => onChange(Number(e.target.value))}
-        min={min}
-        max={max}
-        step={step}
-        placeholder={placeholder}
-        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      />
-    </div>
-  );
-}
-
-function CheckboxField({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center gap-2 cursor-pointer py-2">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-      />
-      <span className="text-sm text-gray-700">{label}</span>
-    </label>
   );
 }
 

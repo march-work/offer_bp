@@ -100,8 +100,6 @@ export function FreshGradResult({ result, input }: Props) {
               value={result.envFactor.toFixed(4)}
             >
               <CalcLeaf label="办公环境" value={`×${result.envFactors.workEnv.toFixed(2)}`} />
-              <CalcLeaf label="领导关系" value={`×${result.envFactors.leader.toFixed(2)}`} />
-              <CalcLeaf label="同事关系" value={`×${result.envFactors.colleague.toFixed(2)}`} />
               <CalcLeaf label="食堂系数" value={`×${result.envFactors.cafeteria.toFixed(2)}`} />
               <CalcNode label="城市储蓄系数" value={`×${result.envFactors.citySavings.toFixed(4)}`}>
                 <CalcLeaf label="城市人均收入" value={`¥${result.envFactors.cityIncome.toLocaleString()}`} />
@@ -144,7 +142,8 @@ export function FreshGradResult({ result, input }: Props) {
                 <CalcLeaf label="博士" value={input?.phdLevel ?? '-'} />
               </CalcNode>
               <CalcLeaf label="行业因子" value={result.industryFactor.toFixed(2)} />
-              <CalcLeaf label="期望年薪" formula={`${result.educationScore.toFixed(2)} × ${result.industryFactor.toFixed(2)}`} value={`${(result.expectedAnnualSalary / 10000).toFixed(1)}万`} />
+              <CalcLeaf label="城市因子" value={`×${result.cityFactor.toFixed(2)}`} />
+              <CalcLeaf label="期望年薪" formula={`${result.educationScore.toFixed(2)} × ${result.industryFactor.toFixed(2)} × ${result.cityFactor.toFixed(2)}`} value={`${(result.expectedAnnualSalary / 10000).toFixed(1)}万`} />
               <CalcLeaf label="期望日薪" formula={`${(result.expectedAnnualSalary).toLocaleString()} / 260`} value={`¥${result.expectedDailySalary.toFixed(0)}`} />
             </CalcNode>
             <CalcNode

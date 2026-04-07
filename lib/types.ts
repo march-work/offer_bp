@@ -51,8 +51,6 @@ export interface FreshGradInput {
 
   // 环境
   workEnvironment: string;
-  leaderRelation: string;
-  colleagueRelation: string;
   hasShuttle: boolean;
   hasCafeteria: boolean;
   cafeteriaQuality: string;
@@ -62,6 +60,7 @@ export interface FreshGradInput {
   socialInsuranceBase: number; // 五险基数
   housingFundBase: number;    // 公积金基数
   hasExtraInsurance: boolean;  // 六险或二金
+  salaryPaymentTiming: string; // 工资发放时间
 
   // 平台系数
   growthFactor: string;      // 个人发展空间
@@ -70,7 +69,7 @@ export interface FreshGradInput {
   overtimeCultureFactor: string; // 加班文化
 
   // 居住方式（影响城市存钱系数）
-  housingMode: 'whole' | 'shared';
+  housingMode: 'newhome' | 'secondhand' | 'whole' | 'shared';
 
   // 区县（可选，不选则用全市均价）
   targetDistrict?: string;
@@ -88,8 +87,6 @@ export interface FreshGradResult {
   envFactor: number;
   envFactors: {
     workEnv: number;
-    leader: number;
-    colleague: number;
     cafeteria: number;
     citySavings: number;
     cityIncome: number;
@@ -103,6 +100,7 @@ export interface FreshGradResult {
     socialInsuranceFactor: number;
     housingFundFactor: number;
     extraInsuranceFactor: number;
+    salaryPaymentFactor: number;
     platformFactor: number;
     growthFactor: number;
     roleCoreFactor: number;
@@ -115,6 +113,7 @@ export interface FreshGradResult {
   effectiveHours: number;
   industryAvgSalary: number;
   industryFactor: number;
+  cityFactor: number;
 }
 
 /** 城市计算数据（从 JSON 加载） */

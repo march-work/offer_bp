@@ -31,3 +31,6 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# TypeScript
+tsconfig.tsbuildinfo

@@ -14,12 +14,13 @@ import {
   SALARY_SCORE_MAP,
   INDUSTRY_FACTOR,
   WORK_ENV_FACTOR,
-  LEADER_FACTOR,
+  getCityFactor,
+  CITY_SAVINGS_RATE_AVG,
+  SALARY_PAYMENT_FACTOR,
   GROWTH_FACTOR,
   ROLE_CORE_FACTOR,
   COMPANY_SIZE_FACTOR,
   OVERTIME_CULTURE_FACTOR,
-  COLLEAGUE_FACTOR,
   CAFETERIA_FACTOR,
   LOCATION_PREF_FACTOR,
   RATINGS,
@@ -135,14 +136,15 @@ export function calculateExpectedSalary(
   city: string,
   industry: string,
   industrySalaries?: Record<string, number>,
-): { expectedAnnual: number; expectedDaily: number; industryAvgSalary: number; industryFactor: number } {
+): { expectedAnnual: number; expectedDaily: number; industryAvgSalary: number; industryFactor: number; cityFactor: number } {
   const baseWan = scoreToExpectedAnnualWan(educationScore);
+  const cityFactor = getCityFactor(city);
   const { factor: realIndustryFactor, avgSalary } = getIndustryInfo(city, industry, industrySalaries);
   // 有真实数据用真实因子，否则回退到通用行业因子
   const industryFactor = avgSalary > 0 ? realIndustryFactor : (INDUSTRY_FACTOR[industry] ?? 1.0);
-  const expectedAnnual = baseWan * industryFactor * 10000;
+  const expectedAnnual = baseWan * cityFactor * industryFactor * 10000;
   const expectedDaily = expectedAnnual / STANDARD_WORKING_DAYS;
-  return { expectedAnnual, expectedDaily, industryAvgSalary: avgSalary, industryFactor };
+  return { expectedAnnual, expectedDaily, industryAvgSalary: avgSalary, industryFactor, cityFactor };
 }
 
 /** 计算办公室比例 */
@@ -204,6 +206,9 @@ function computeAnnualHousingCost(
       return housing.wholeRentPrice * HOUSING_WHOLE_RENT_AREA * 12;
     case 'shared':
       return housing.sharedRentPrice * HOUSING_SHARED_RENT_AREA * 12;
+    case 'newhome':
+    case 'secondhand':
+      return 0; // 买房模式不计入年居住成本（用于储蓄率计算）
     default:
       return 0;
   }
@@ -241,12 +246,10 @@ function mapCitySavings(value: number): number {
 export function calculateEnvFactor(
   input: FreshGradInput,
   cityData: CityCalculationData,
-  citySavingsRateAvg: number = 0.3, // 默认归一化基数
+  citySavingsRateAvg: number = CITY_SAVINGS_RATE_AVG,
   annualSalary: number = 0,
 ): { value: number; factors: FreshGradResult['envFactors'] } {
   const workEnv = WORK_ENV_FACTOR[input.workEnvironment] ?? 1.0;
-  const leader = LEADER_FACTOR[input.leaderRelation] ?? 1.0;
-  const colleague = COLLEAGUE_FACTOR[input.colleagueRelation] ?? 1.0;
   const cafeteria = input.hasCafeteria
     ? (CAFETERIA_FACTOR[input.cafeteriaQuality ?? '普通'] ?? 1.0)
     : 1.0;
@@ -265,9 +268,10 @@ export function calculateEnvFactor(
     : 0.8;
   const housingFundFactor = input.hasHousingFund === '有'
     ? calcBaseFactor((input.housingFundBase || salary) / salary)
-    : 0.8;
+    : 0.9;
   const extraInsuranceFactor = input.hasExtraInsurance ? 1.1 : 1.0;
-  const laborFactor = socialInsuranceFactor * housingFundFactor * extraInsuranceFactor;
+  const salaryPaymentFactor = SALARY_PAYMENT_FACTOR[input.salaryPaymentTiming] ?? 1.0;
+  const laborFactor = socialInsuranceFactor * housingFundFactor * extraInsuranceFactor * salaryPaymentFactor;
 
   const housingCost = computeAnnualHousingCost(input.housingMode, cityData);
   const savingsRate = (cityData.income - cityData.consumption * 0.7 - housingCost) / cityData.income;
@@ -287,9 +291,9 @@ export function calculateEnvFactor(
   const platformFactor = growthVal * roleCoreVal * companySizeVal / overtimeCultureVal;
 
   return {
-    value: workEnv * leader * colleague * citySavings * cafeteria * settlement * locationPref * laborFactor * platformFactor,
+    value: workEnv * citySavings * cafeteria * settlement * locationPref * laborFactor * platformFactor,
     factors: {
-      workEnv, leader, colleague, cafeteria, citySavings,
+      workEnv, cafeteria, citySavings,
       cityIncome: cityData.income,
       cityConsumption: cityData.consumption,
       annualHousingCost: housingCost,
@@ -301,6 +305,7 @@ export function calculateEnvFactor(
       socialInsuranceFactor,
       housingFundFactor,
       extraInsuranceFactor,
+      salaryPaymentFactor,
       platformFactor,
       growthFactor: growthVal,
       roleCoreFactor: roleCoreVal,
@@ -328,7 +333,7 @@ export function calculateFreshGradScore(
   const workingDays = calculateWorkingDays(input);
   const dailySalary = calculateDailySalary(tc, workingDays);
   const educationScore = calculateEducationScore(input);
-  const { expectedAnnual, expectedDaily, industryAvgSalary, industryFactor } = calculateExpectedSalary(
+  const { expectedAnnual, expectedDaily, industryAvgSalary, industryFactor, cityFactor } = calculateExpectedSalary(
     educationScore, input.targetCity, input.targetIndustry, cityData.industrySalaries,
   );
   const { value: envFactor, factors: envFactors } = calculateEnvFactor(input, cityData, citySavingsRateAvg, tc);
@@ -358,5 +363,6 @@ export function calculateFreshGradScore(
     effectiveHours,
     industryAvgSalary,
     industryFactor,
+    cityFactor,
   };
 }

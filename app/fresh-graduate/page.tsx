@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Suspense, useState, useMemo, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { FreshGradInput, CityCalculationData } from '@/lib/types';
 import { calculateFreshGradScore, calculateTotalCompensation } from '@/lib/calculate';
@@ -15,7 +16,33 @@ import {
   commuteMinutesToDailyHours,
   type CityDataBundle,
 } from '@/lib/city-data';
-import { CITY_OPTIONS, NATIONAL_INCOME, NATIONAL_EXPENDITURE, NATIONAL_SAVINGS_RATIO } from '@/lib/constants';
+import { CITY_OPTIONS, NATIONAL_INCOME, NATIONAL_EXPENDITURE, NATIONAL_SAVINGS_RATIO, CITY_SAVINGS_RATE_AVG } from '@/lib/constants';
+
+export type EvalMode = 'quick' | 'detailed';
+
+/** 极速版隐藏的字段及其中性默认值（所有系数为 1.0，金额为 0，天数为标准值） */
+const QUICK_DEFAULTS: Partial<FreshGradInput> = {
+  locationPreference: '无所谓',
+  annualStock: 0,
+  monthlyAllowance: 0,
+  hasExtraInsurance: false,
+  salaryPaymentTiming: '次月15日前',
+  wfhDaysPerWeek: 0,
+  publicHolidays: 13,
+  paidSickLeave: 0,
+  commuteHours: 0,
+  growthFactor: '一般',
+  roleCoreFactor: '一般',
+};
+
+// ── Suspense wrapper ──
+export default function FreshGradPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <FreshGradPage />
+    </Suspense>
+  );
+}
 
 const DEFAULT_INPUT: FreshGradInput = {
   bachelorLevel: '双非',
@@ -37,8 +64,6 @@ const DEFAULT_INPUT: FreshGradInput = {
   commuteHours: 1.5,
   restHours: 1.5,
   workEnvironment: '普通',
-  leaderRelation: '中规中矩',
-  colleagueRelation: '萍水相逢',
   hasShuttle: false,
   hasCafeteria: false,
   cafeteriaQuality: '普通',
@@ -48,6 +73,7 @@ const DEFAULT_INPUT: FreshGradInput = {
   socialInsuranceBase: 0,
   housingFundBase: 0,
   hasExtraInsurance: false,
+  salaryPaymentTiming: '次月15日前',
   growthFactor: '一般',
   roleCoreFactor: '一般',
   companySizeFactor: '中型公司',
@@ -55,9 +81,16 @@ const DEFAULT_INPUT: FreshGradInput = {
   housingMode: 'shared',
 };
 
-export default function FreshGradPage() {
-  const [input, setInput] = useState<FreshGradInput>(DEFAULT_INPUT);
+function FreshGradPage() {
+  const searchParams = useSearchParams();
+  const mode: EvalMode = searchParams.get('mode') === 'quick' ? 'quick' : 'detailed';
+
+  const [input, setInput] = useState<FreshGradInput>({
+    ...DEFAULT_INPUT,
+    ...(mode === 'quick' ? QUICK_DEFAULTS : {}),
+  });
   const [calculatedInput, setCalculatedInput] = useState<FreshGradInput | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // ── 城市数据加载 ──
   const [cityDataBundle, setCityDataBundle] = useState<CityDataBundle | null>(null);
@@ -104,7 +137,7 @@ export default function FreshGradPage() {
     // 如果选了区县，用区县级房价
     let housing = avgHousing;
     if (input.targetDistrict) {
-      const districtHousing = getDistrictHousing(cityDataBundle.housing, input.targetDistrict);
+      const districtHousing = getDistrictHousing(cityDataBundle.housing, input.targetDistrict, avgHousing);
       if (districtHousing) housing = districtHousing;
     }
 
@@ -142,43 +175,35 @@ export default function FreshGradPage() {
   const handleCalculate = useCallback(() => {
     const tc = calculateTotalCompensation(input);
     if (tc <= 0) {
-      alert('请先填写月薪（月薪需大于 0）');
+      setErrorMsg('请先填写月薪（月薪需大于 0）');
       return;
     }
     if (!input.hasSocialInsurance) {
-      alert('请选择是否有五险');
+      setErrorMsg('请选择是否有五险');
       return;
     }
     if (!input.hasHousingFund) {
-      alert('请选择是否有公积金');
+      setErrorMsg('请选择是否有公积金');
       return;
     }
     if (input.hasSocialInsurance === '有' && (!input.socialInsuranceBase || input.socialInsuranceBase <= 0)) {
-      alert('请填写五险基数');
+      setErrorMsg('请填写五险基数');
       return;
     }
     if (input.hasHousingFund === '有' && (!input.housingFundBase || input.housingFundBase <= 0)) {
-      alert('请填写公积金基数');
+      setErrorMsg('请填写公积金基数');
       return;
     }
+    setErrorMsg(null);
     setCalculatedInput({ ...input });
   }, [input]);
-
-  // 计算城市储蓄率归一化基数（使用所有城市数据）
-  const citySavingsRateAvg = useMemo(() => {
-    if (!cityCalcData) return 0.3;
-    // 简单估算：使用当前城市的储蓄率作为基准，或者使用固定值
-    const savingsRate = (cityCalcData.income - cityCalcData.consumption 
-      - cityCalcData.sharedRentPrice * 20 * 12) / cityCalcData.income;
-    return Math.max(0.1, Math.min(0.5, savingsRate));
-  }, [cityCalcData]);
 
   const result = useMemo(() => {
     if (!calculatedInput || !cityCalcData) return null;
     const tc = calculateTotalCompensation(calculatedInput);
     if (tc <= 0) return null;
-    return calculateFreshGradScore(calculatedInput, cityCalcData, citySavingsRateAvg);
-  }, [calculatedInput, cityCalcData, citySavingsRateAvg]);
+    return calculateFreshGradScore(calculatedInput, cityCalcData);
+  }, [calculatedInput, cityCalcData]);
 
   const tc = useMemo(() => {
     if (!calculatedInput) return 0;
@@ -215,6 +240,11 @@ export default function FreshGradPage() {
             </Link>
             <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
               应届生 Offer 评测
+              <span className={`ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full align-middle ${
+                mode === 'quick' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'
+              }`}>
+                {mode === 'quick' ? '极速版' : '详细版'}
+              </span>
             </h1>
           </div>
         </div>
@@ -231,11 +261,24 @@ export default function FreshGradPage() {
               onCalculate={handleCalculate}
               districts={districts}
               dataLoading={dataLoading}
+              mode={mode}
             />
           </div>
           {/* 右栏: 结果 */}
           <div className="lg:col-span-2">
             <div className="sticky top-16 space-y-4">
+              {errorMsg && (
+                <div className="hidden lg:flex bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 items-center justify-between">
+                  <span>{errorMsg}</span>
+                  <button
+                    type="button"
+                    onClick={() => setErrorMsg(null)}
+                    className="ml-2 text-red-400 hover:text-red-600 text-lg leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               <FreshGradResult result={result} input={calculatedInput ?? input} />
               <LivingCostCard
                 cityName={calculatedInput?.targetCity ?? input.targetCity}
@@ -271,13 +314,20 @@ export default function FreshGradPage() {
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={handleCalculate}
-            className="w-full py-3 bg-blue-600 text-white text-base font-semibold rounded-xl active:bg-blue-800 transition-colors"
-          >
-            开始评测
-          </button>
+          <>
+            {errorMsg && (
+              <div className="text-red-600 text-xs mb-2 text-center animate-pulse">
+                {errorMsg}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleCalculate}
+              className="w-full py-3 bg-blue-600 text-white text-base font-semibold rounded-xl active:bg-blue-800 transition-colors"
+            >
+              开始评测
+            </button>
+          </>
         )}
       </div>
     </div>

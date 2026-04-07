@@ -11,15 +11,15 @@ export const STANDARD_HOURS = 8;
 export const BACHELOR_OPTIONS: { label: string; score: number }[] = [
   { label: '专科', score: 1.0 },
   { label: '专升本', score: 1.5 },
-  { label: '双非', score: 3.0 },
-  { label: '双一流', score: 4.0 },
+  { label: '双非', score: 2.5 },
+  { label: '双非+双一流专业', score: 4.0 },
   { label: '211', score: 5.0 },
   { label: '强势211', score: 6.0 },
   { label: '985', score: 7.0 },
   { label: '华五/C9', score: 8.0 },
   { label: '清北', score: 9.5 },
-  { label: '海外QS100', score: 5.5 },
-  { label: '海外QS30', score: 7.5 },
+  { label: '海外QS/USNews/THE/软科 100', score: 5.5 },
+  { label: '海外QS/USNews/THE/软科 30', score: 7.5 },
 ];
 
 export const MASTER_OPTIONS: { label: string; score: number }[] = [
@@ -28,20 +28,20 @@ export const MASTER_OPTIONS: { label: string; score: number }[] = [
   { label: '985硕士', score: 6.0 },
   { label: '华五/C9硕士', score: 7.5 },
   { label: '清北硕士', score: 8.5 },
-  { label: '海外QS100', score: 5.0 },
-  { label: '海外QS30', score: 7.0 },
+  { label: '海外QS/USNews/THE/软科 100', score: 5.0 },
+  { label: '海外QS/USNews/THE/软科 30', score: 7.0 },
   { label: '直博', score: 0 },
 ];
 
 export const PHD_OPTIONS: { label: string; score: number }[] = [
-  { label: '双非博士', score: 3.0 },
+  { label: '双非博士', score: 4.0 },
   { label: '211博士', score: 5.0 },
   { label: '985博士', score: 7.0 },
   { label: '华五/C9博士', score: 8.5 },
   { label: '清北博士', score: 9.5 },
-  { label: '海外QS100', score: 6.0 },
-  { label: '海外QS30', score: 8.0 },
-  { label: '顶尖Top20', score: 10.0 },
+  { label: '海外QS/USNews/THE/软科 100', score: 6.0 },
+  { label: '海外QS/USNews/THE/软科 30', score: 8.0 },
+  { label: '我是TOP/大牛', score: 12.0 },
 ];
 
 // ── 学历分值 → 期望年薪（万元）映射 ──
@@ -77,11 +77,58 @@ export const NATIONAL_SAVINGS_RATIO = 1.46;
 export const NATIONAL_INCOME = 41314;
 export const NATIONAL_EXPENDITURE = 28227;
 
+// ── 11 城人均可支配收入（元/年）──
+// 数据来源：各城市统计局 2024 年
+export const CITY_INCOME_MAP: Record<string, number> = {
+  '上海': 91987,
+  '北京': 89090,
+  '深圳': 81123,
+  '广州': 83436,
+  '杭州': 80017,
+  '南京': 75180,
+  '合肥': 55832,
+  '成都': 52024,
+  '武汉': 59732,
+  '西安': 45082,
+  '青岛': 59922,
+};
+
+/** 11 城人均可支配收入均值 */
+const allCityIncomes = Object.values(CITY_INCOME_MAP);
+export const CITY_INCOME_AVG = allCityIncomes.reduce((a, b) => a + b, 0) / allCityIncomes.length;
+
+/** 城市因子 = 城市人均收入 / 11城均值 */
+export function getCityFactor(city: string): number {
+  const income = CITY_INCOME_MAP[city];
+  if (!income) return 1.0;
+  return income / CITY_INCOME_AVG;
+}
+
+// ── 11 城储蓄率（归一化基数用，合租模式）──
+// 储蓄率 = (人均收入 - 人均支出 × 0.7 - 合租单价 × 20㎡ × 12) / 人均收入
+export const CITY_SAVINGS_RATE_MAP: Record<string, number> = {
+  '北京': 0.227,
+  '上海': 0.360,
+  '深圳': 0.200,
+  '广州': 0.364,
+  '杭州': 0.351,
+  '南京': 0.394,
+  '合肥': 0.444,
+  '成都': 0.307,
+  '武汉': 0.333,
+  '西安': 0.372,
+  '青岛': 0.409,
+};
+
+/** 11 城储蓄率均值 */
+const allCitySavingsRates = Object.values(CITY_SAVINGS_RATE_MAP);
+export const CITY_SAVINGS_RATE_AVG = allCitySavingsRates.reduce((a, b) => a + b, 0) / allCitySavingsRates.length;
+
 // ── 行业系数（仅用于无真实数据时的兜底）──
 export const INDUSTRY_FACTOR: Record<string, number> = {
-  '金融专业': 1.10,
-  '信息传输、软件和信息技术服务专业': 1.20,
-  '卫生和社会工作专业': 1.05,
+  '金融专业': 1.50,
+  '信息传输、软件和信息技术服务专业': 1.50,
+  '卫生和社会工作专业': 1,
   '科学研究和技术服务专业': 1.15,
   '教育专业': 0.80,
   '文化、体育和娱乐专业': 0.95,
@@ -96,22 +143,6 @@ export const WORK_ENV_FACTOR: Record<string, number> = {
   '普通': 1.0,
   '偏远/厂区': 0.9,
   '条件较差': 0.8,
-};
-
-export const LEADER_FACTOR: Record<string, number> = {
-  '善解人意': 1.2,
-  '比较好': 1.1,
-  '中规中矩': 1.0,
-  '比较坑': 0.9,
-  '简直噩梦': 0.8,
-};
-
-export const COLLEAGUE_FACTOR: Record<string, number> = {
-  '亲如一家': 1.2,
-  '和和睦睦': 1.1,
-  '萍水相逢': 1.0,
-  '勾勾搭角': 0.9,
-  '乌烟瘴气': 0.8,
 };
 
 export const CAFETERIA_FACTOR: Record<string, number> = {
@@ -155,15 +186,24 @@ export const COMPANY_SIZE_FACTOR: Record<string, number> = {
 
 export const OVERTIME_CULTURE_FACTOR: Record<string, number> = {
   '准点下班': 1.0,
-  '偶尔加班': 1.1,
-  '常态化加班': 1.2,
-  '严重内卷': 1.3,
+  '偶尔加班': 1.03,
+  '常态化加班': 1.1,
+  '严重内卷': 1.2,
 };
 
 export const GROWTH_OPTIONS = ['晋升路径清晰', '有一定空间', '一般', '空间有限', '几乎没有'] as const;
 export const ROLE_CORE_OPTIONS = ['核心业务线', '重要支撑', '一般', '边缘岗位', '随时可替代'] as const;
 export const COMPANY_SIZE_OPTIONS = ['大厂/行业头部', '中大型企业', '中型公司', '小公司', '初创/微型'] as const;
 export const OVERTIME_CULTURE_OPTIONS = ['准点下班', '偶尔加班', '常态化加班', '严重内卷'] as const;
+
+// ── 工资发放时间系数 ──
+export const SALARY_PAYMENT_FACTOR: Record<string, number> = {
+  '当月发放': 1.1,
+  '次月15日前': 1.0,
+  '压一个月': 0.9,
+  '压两个月': 0.8,
+};
+export const SALARY_PAYMENT_OPTIONS = ['当月发放', '次月15日前', '压一个月', '压两个月'] as const;
 
 // ── 评级体系 ──
 export const RATINGS: { max: number; info: RatingInfo }[] = [
@@ -252,8 +292,7 @@ export const INDUSTRY_OPTIONS = [
 ] as const;
 
 export const WORK_ENV_OPTIONS = ['高端园区', 'CBD/甲级写字楼', '普通', '偏远/厂区', '条件较差'] as const;
-export const LEADER_OPTIONS = ['善解人意', '比较好', '中规中矩', '比较坑', '简直噩梦'] as const;
-export const COLLEAGUE_OPTIONS = ['亲如一家', '和和睦睦', '萍水相逢', '勾勾搭角', '乌烟瘴气'] as const;
+
 export const CAFETERIA_OPTIONS = ['丰富且便宜', '不错', '普通', '较差'] as const;
 export const LOCATION_PREF_OPTIONS = ['喜欢/离家近', '无所谓', '不太满意/有点远'] as const;
 
