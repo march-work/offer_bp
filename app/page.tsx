@@ -7,7 +7,7 @@ export default function HomePage() {
   const [freshExpanded, setFreshExpanded] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 animate-[fadeIn_400ms_ease-out]">
       {/* 标题区 */}
       <div className="text-center mb-12">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mb-3">
@@ -24,7 +24,7 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => setFreshExpanded(!freshExpanded)}
-          className="group w-full text-left block rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+          className="group w-full text-left block rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-blue-300 active:scale-[0.985] transition-all"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -46,7 +46,7 @@ export default function HomePage() {
 
         {/* 展开的子选项 */}
         {freshExpanded && (
-          <div className="grid grid-cols-2 gap-4 animate-[fadeIn_150ms_ease-out]">
+          <div className="grid grid-cols-2 gap-4 animate-[slideUp_250ms_ease-out]">
             {/* 极速版 */}
             <Link
               href="/fresh-graduate?mode=quick"

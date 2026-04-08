@@ -13,10 +13,9 @@ import {
   computeCityAverageHousing,
   getDistrictHousing,
   buildIndustrySalaryMap,
-  commuteMinutesToDailyHours,
   type CityDataBundle,
 } from '@/lib/city-data';
-import { CITY_OPTIONS, NATIONAL_INCOME, NATIONAL_EXPENDITURE, NATIONAL_SAVINGS_RATIO, CITY_SAVINGS_RATE_AVG } from '@/lib/constants';
+import { CITY_OPTIONS } from '@/lib/constants';
 
 export type EvalMode = 'quick' | 'detailed';
 
@@ -76,7 +75,7 @@ const DEFAULT_INPUT: FreshGradInput = {
   salaryPaymentTiming: '次月15日前',
   growthFactor: '一般',
   roleCoreFactor: '一般',
-  companySizeFactor: '中型公司',
+  companySizeFactor: '中型公司（200-2000人）',
   overtimeCultureFactor: '偶尔加班',
   housingMode: 'shared',
 };
@@ -144,15 +143,11 @@ function FreshGradPage() {
     return {
       income: cityDataBundle.income.per_capita_disposable_income,
       consumption: cityDataBundle.income.per_capita_consumption_expenditure,
-      savingsRatio: cityDataBundle.income.savings_ratio,
       secondhandPrice: housing.secondhandPrice,
       newhomePrice: housing.newhomePrice,
       wholeRentPrice: housing.wholeRentPrice,
       sharedRentPrice: housing.sharedRentPrice,
       industrySalaries,
-      nationalIncome: NATIONAL_INCOME,
-      nationalExpenditure: NATIONAL_EXPENDITURE,
-      nationalSavingsRatio: NATIONAL_SAVINGS_RATIO,
     };
   }, [cityDataBundle, input.targetDistrict]);
 
@@ -206,9 +201,8 @@ function FreshGradPage() {
   }, [calculatedInput, cityCalcData]);
 
   const tc = useMemo(() => {
-    if (!calculatedInput) return 0;
-    return calculateTotalCompensation(calculatedInput);
-  }, [calculatedInput]);
+    return calculateTotalCompensation(input);
+  }, [input]);
 
   // LivingCostCard 需要的数据
   const livingCostHousing = useMemo(() => {
@@ -281,7 +275,7 @@ function FreshGradPage() {
               )}
               <FreshGradResult result={result} input={calculatedInput ?? input} />
               <LivingCostCard
-                cityName={calculatedInput?.targetCity ?? input.targetCity}
+                cityName={input.targetCity}
                 annualSalary={tc}
                 value={input.housingMode}
                 onChange={(mode) => handleInputChange('housingMode', mode)}
@@ -294,7 +288,7 @@ function FreshGradPage() {
       </main>
 
       {/* 移动端底部固定栏 */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] animate-[slideUp_300ms_ease-out]">
         {result ? (
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -308,7 +302,7 @@ function FreshGradPage() {
             <button
               type="button"
               onClick={handleCalculate}
-              className="shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg active:bg-blue-800 transition-colors"
+              className="shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg active:scale-95 active:bg-blue-800 transition-all"
             >
               重新评测
             </button>
@@ -323,7 +317,7 @@ function FreshGradPage() {
             <button
               type="button"
               onClick={handleCalculate}
-              className="w-full py-3 bg-blue-600 text-white text-base font-semibold rounded-xl active:bg-blue-800 transition-colors"
+              className="w-full py-3 bg-blue-600 text-white text-base font-semibold rounded-xl active:scale-[0.98] active:bg-blue-800 transition-all"
             >
               开始评测
             </button>

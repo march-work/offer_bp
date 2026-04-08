@@ -2,8 +2,6 @@
 // 公式:FreshGrad Score = (dailySalary × envFactor) / (expectedDailySalary × timeFactor)
 // 其中 timeFactor = effectiveHours / 8，归一化到标准8小时工作制
 
-// 支持两种数据源：1) 从 JSON 加载的 cityData  2) 回退到硬编码 constants
-
 import type { FreshGradInput, FreshGradResult, RatingInfo, CityCalculationData } from './types';
 import {
   STANDARD_WORKING_DAYS,
@@ -15,7 +13,6 @@ import {
   INDUSTRY_FACTOR,
   WORK_ENV_FACTOR,
   getCityFactor,
-  CITY_SAVINGS_RATE_AVG,
   SALARY_PAYMENT_FACTOR,
   GROWTH_FACTOR,
   ROLE_CORE_FACTOR,
@@ -24,27 +21,35 @@ import {
   CAFETERIA_FACTOR,
   LOCATION_PREF_FACTOR,
   RATINGS,
+  SHUTTLE_FACTOR_HAS,
+  SHUTTLE_FACTOR_NO,
+  EDUCATION_WEIGHTS,
+  SICK_LEAVE_DISCOUNT,
+  REST_TIME_DISCOUNT,
+  SETTLEMENT_RATIO_MIN,
+  SETTLEMENT_RATIO_MAX,
+  SETTLEMENT_FACTOR_MIN,
+  SETTLEMENT_FACTOR_MAX,
+  CITY_SAVINGS_RAW_MAX,
+  CITY_SAVINGS_MIN,
+  CITY_SAVINGS_LOW,
+  CITY_SAVINGS_MAX,
+  BASE_RATIO_LOW,
+  BASE_RATIO_MID,
+  BASE_RATIO_HIGH,
+  BASE_FACTOR_MIN,
+  BASE_FACTOR_MAX,
+  NO_SOCIAL_INSURANCE_FACTOR,
+  NO_HOUSING_FUND_FACTOR,
+  EXTRA_INSURANCE_FACTOR,
+  CONSUMPTION_DISCOUNT,
+  DEFAULT_CITY_SAVINGS_RATE_AVG,
+  DEFAULT_BUY_AREA,
+  DEFAULT_WHOLE_RENT_AREA,
+  DEFAULT_SHARED_RENT_AREA,
+  DOWN_PAYMENT_RATIO,
 } from './constants';
 import { getIndustryInfo } from './industry-salary';
-import {
-  calcMonthlyPayment,
-  DEFAULT_BUY_AREA as HOUSING_BUY_AREA,
-  DEFAULT_WHOLE_RENT_AREA as HOUSING_WHOLE_RENT_AREA,
-  DEFAULT_SHARED_RENT_AREA as HOUSING_SHARED_RENT_AREA,
-  DOWN_PAYMENT_RATIO as HOUSING_DOWN_PAYMENT,
-  LOAN_YEARS as HOUSING_LOAN_YEARS,
-  INTEREST_RATE as HOUSING_INTEREST_RATE,
-} from './living-cost';
-
-const SHUTTLE_FACTOR_HAS = 0.3;
-const SHUTTLE_FACTOR_NO = 1.0;
-
-const EDUCATION_WEIGHTS: Record<string, { b: number; m: number; p: number }> = {
-  bachelor: { b: 0.5, m: 0.0, p: 0.0 },
-  master: { b: 0.35, m: 0.65, p: 0.0 },
-  phd: { b: 0.25, m: 0.15, p: 0.6 },
-  direct_phd: { b: 0.35, m: 0.0, p: 0.65 },
-};
 
 // ── 学历分值查找 ──
 function getBachelorScore(level: string): number {
@@ -120,7 +125,7 @@ export function calculateTotalCompensation(input: FreshGradInput): number {
 export function calculateWorkingDays(input: FreshGradInput): number {
   return (
     52 * input.workDaysPerWeek
-    - (input.annualLeave + input.publicHolidays + input.paidSickLeave * 0.6)
+    - (input.annualLeave + input.publicHolidays + input.paidSickLeave * SICK_LEAVE_DISCOUNT)
   );
 }
 
@@ -167,45 +172,34 @@ export function calculateEffectiveHours(
   return (
     input.dailyWorkHours
     + input.commuteHours * shuttleFactor
-    - 0.5 * input.restHours
+    - REST_TIME_DISCOUNT * input.restHours
   ) * officeRatio;
 }
 
 /** 计算定居期望因子
  *  定居期望系数 = 10年收入 / 新房90㎡首付(30%)
- *  系数 >= 3 → 1.2（定居轻松，加分）
- *  系数 <= 1 → 0.8（定居困难，减分）
- *  1 < 系数 < 3 → 线性插值 0.8 ~ 1.2
  */
 export function calcSettlementFactor(annualSalary: number, newhomePrice: number): number {
   if (newhomePrice <= 0) return 1.0;
-  // 首付(元) = 单价(万元/㎡) × 10000 × 90㎡ × 30%
-  const downPayment = newhomePrice * 10000 * HOUSING_BUY_AREA * HOUSING_DOWN_PAYMENT;
+  const downPayment = newhomePrice * 10000 * DEFAULT_BUY_AREA * DOWN_PAYMENT_RATIO;
   const coeff = (annualSalary * 10) / downPayment;
-  if (coeff >= 3) return 1.2;
-  if (coeff <= 1) return 0.8;
-  return 0.8 + (coeff - 1) * 0.2;
+  if (coeff >= SETTLEMENT_RATIO_MAX) return SETTLEMENT_FACTOR_MAX;
+  if (coeff <= SETTLEMENT_RATIO_MIN) return SETTLEMENT_FACTOR_MIN;
+  return SETTLEMENT_FACTOR_MIN + (coeff - SETTLEMENT_RATIO_MIN) * (SETTLEMENT_FACTOR_MAX - SETTLEMENT_FACTOR_MIN) / (SETTLEMENT_RATIO_MAX - SETTLEMENT_RATIO_MIN);
 }
 
-/** ── 居住成本计算（支持外部数据） ── */
-
-interface HousingPrices {
-  wholeRentPrice: number;
-  sharedRentPrice: number;
-  newhomePrice: number;
-  secondhandPrice: number;
-}
+/** ── 居住成本计算 ── */
 
 /** 计算指定城市的年居住成本 */
 function computeAnnualHousingCost(
   mode: FreshGradInput['housingMode'],
-  housing: HousingPrices,
+  housing: CityCalculationData,
 ): number {
   switch (mode) {
     case 'whole':
-      return housing.wholeRentPrice * HOUSING_WHOLE_RENT_AREA * 12;
+      return housing.wholeRentPrice * DEFAULT_WHOLE_RENT_AREA * 12;
     case 'shared':
-      return housing.sharedRentPrice * HOUSING_SHARED_RENT_AREA * 12;
+      return housing.sharedRentPrice * DEFAULT_SHARED_RENT_AREA * 12;
     case 'newhome':
     case 'secondhand':
       return 0; // 买房模式不计入年居住成本（用于储蓄率计算）
@@ -214,39 +208,18 @@ function computeAnnualHousingCost(
   }
 }
 
-/** 计算购房年月供 × 12 = 年居住成本（仅用于定居系数展示） */
-export function computeAnnualMortgage(unitPriceWan: number): number {
-  const totalPriceWan = unitPriceWan * HOUSING_BUY_AREA;
-  const downPayment = totalPriceWan * HOUSING_DOWN_PAYMENT;
-  const loanWan = totalPriceWan - downPayment;
-  const monthlyPayment = calcMonthlyPayment(loanWan, HOUSING_INTEREST_RATE, HOUSING_LOAN_YEARS);
-  return monthlyPayment * 12;
-}
-
-/** 从外部数据计算含居住成本的储蓄率归一化基数 */
-function computeSavingsAvgFromExternal(allCityData: { income: number; consumption: number; wholeRentPrice: number; sharedRentPrice: number }[]): number {
-  let total = 0;
-  for (const data of allCityData) {
-    const housingCost = data.sharedRentPrice * HOUSING_SHARED_RENT_AREA * 12;
-    const savingsRate = (data.income - data.consumption - housingCost) / data.income;
-    total += savingsRate;
-  }
-  return total / allCityData.length;
-}
-
-/** 城市储蓄系数分段线性映射：<0→0.6, 0→0.8, 1.5→1.2, >1.5→1.2 */
+/** 城市储蓄系数分段线性映射 */
 function mapCitySavings(value: number): number {
-  if (value <= 0) return 0.6;
-  if (value >= 1.5) return 1.2;
-  // 0→0.8, 1.5→1.2 线性插值
-  return 0.8 + (value / 1.5) * 0.4;
+  if (value <= 0) return CITY_SAVINGS_MIN;
+  if (value >= CITY_SAVINGS_RAW_MAX) return CITY_SAVINGS_MAX;
+  return CITY_SAVINGS_LOW + (value / CITY_SAVINGS_RAW_MAX) * (CITY_SAVINGS_MAX - CITY_SAVINGS_LOW);
 }
 
 /** 计算环境系数（必须提供 cityData） */
 export function calculateEnvFactor(
   input: FreshGradInput,
   cityData: CityCalculationData,
-  citySavingsRateAvg: number = CITY_SAVINGS_RATE_AVG,
+  citySavingsRateAvg: number = DEFAULT_CITY_SAVINGS_RATE_AVG,
   annualSalary: number = 0,
 ): { value: number; factors: FreshGradResult['envFactors'] } {
   const workEnv = WORK_ENV_FACTOR[input.workEnvironment] ?? 1.0;
@@ -256,31 +229,30 @@ export function calculateEnvFactor(
   const locationPref = LOCATION_PREF_FACTOR[input.locationPreference] ?? 1.0;
   /** 基数系数：基数/月薪 比值分段线性映射 */
   function calcBaseFactor(ratio: number): number {
-    if (ratio < 0.5) return 0.8;
-    if (ratio <= 0.8) return 1.0;
-    if (ratio <= 1.1) return 1.0 + (ratio - 0.8) / (1.1 - 0.8) * 0.1;
-    return 1.2;
+    if (ratio < BASE_RATIO_LOW) return BASE_FACTOR_MIN;
+    if (ratio <= BASE_RATIO_MID) return 1.0;
+    if (ratio <= BASE_RATIO_HIGH) return 1.0 + (ratio - BASE_RATIO_MID) / (BASE_RATIO_HIGH - BASE_RATIO_MID) * (BASE_FACTOR_MAX - 1.0);
+    return BASE_FACTOR_MAX;
   }
 
   const salary = input.monthlyBaseSalary || 1;
   const socialInsuranceFactor = input.hasSocialInsurance === '有'
     ? calcBaseFactor((input.socialInsuranceBase || salary) / salary)
-    : 0.8;
+    : NO_SOCIAL_INSURANCE_FACTOR;
   const housingFundFactor = input.hasHousingFund === '有'
     ? calcBaseFactor((input.housingFundBase || salary) / salary)
-    : 0.9;
-  const extraInsuranceFactor = input.hasExtraInsurance ? 1.1 : 1.0;
+    : NO_HOUSING_FUND_FACTOR;
+  const extraInsuranceFactor = input.hasExtraInsurance ? EXTRA_INSURANCE_FACTOR : 1.0;
   const salaryPaymentFactor = SALARY_PAYMENT_FACTOR[input.salaryPaymentTiming] ?? 1.0;
   const laborFactor = socialInsuranceFactor * housingFundFactor * extraInsuranceFactor * salaryPaymentFactor;
 
   const housingCost = computeAnnualHousingCost(input.housingMode, cityData);
-  const savingsRate = (cityData.income - cityData.consumption * 0.7 - housingCost) / cityData.income;
+  const savingsRate = (cityData.income - cityData.consumption * CONSUMPTION_DISCOUNT - housingCost) / cityData.income;
   const rawCitySavings = savingsRate / citySavingsRateAvg;
-  // 分段线性映射：<0→0.6, 0→0.8, 1.5→1.2, >1.5→1.2
   const citySavings = mapCitySavings(rawCitySavings);
 
   const settlement = calcSettlementFactor(annualSalary, cityData.newhomePrice);
-  const newhomeDownPayment = cityData.newhomePrice * 10000 * HOUSING_BUY_AREA * HOUSING_DOWN_PAYMENT;
+  const newhomeDownPayment = cityData.newhomePrice * 10000 * DEFAULT_BUY_AREA * DOWN_PAYMENT_RATIO;
 
   // ── 平台系数 ──
   const growthVal = GROWTH_FACTOR[input.growthFactor] ?? 1.0;
@@ -327,7 +299,7 @@ export function getRating(score: number): RatingInfo {
 export function calculateFreshGradScore(
   input: FreshGradInput,
   cityData: CityCalculationData,
-  citySavingsRateAvg: number = 0.3,
+  citySavingsRateAvg: number = DEFAULT_CITY_SAVINGS_RATE_AVG,
 ): FreshGradResult {
   const tc = calculateTotalCompensation(input);
   const workingDays = calculateWorkingDays(input);

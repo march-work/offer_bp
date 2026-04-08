@@ -355,7 +355,7 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
       <button
         type="button"
         onClick={onCalculate}
-        className="hidden lg:block w-full py-3.5 bg-blue-600 text-white text-base font-semibold rounded-xl hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm"
+        className="hidden lg:block w-full py-3.5 bg-blue-600 text-white text-base font-semibold rounded-xl hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800 transition-all shadow-sm"
       >
         开始评测
       </button>

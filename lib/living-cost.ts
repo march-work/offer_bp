@@ -7,6 +7,17 @@ import {
   RENT_RATING_CONFIG,
   BUY_RATING_CONFIG,
   PRESSURE_RATING_CONFIG,
+  DEFAULT_BUY_AREA,
+  DEFAULT_WHOLE_RENT_AREA,
+  DEFAULT_SHARED_RENT_AREA,
+  DOWN_PAYMENT_RATIO,
+  LOAN_YEARS,
+  INTEREST_RATE,
+  PRESSURE_WEIGHT_BUY,
+  PRESSURE_WEIGHT_RENT,
+  PRESSURE_WEIGHT_SAVINGS,
+  PRESSURE_BUY_BASELINE,
+  PRESSURE_RENT_BASELINE,
 } from './constants';
 
 // ── 计算结果类型 ──
@@ -44,15 +55,9 @@ export interface LivingCostResult {
   pressureColor: string;
 }
 
-// ── 默认参数 ──
-export const DEFAULT_BUY_AREA = 90;
-export const DEFAULT_WHOLE_RENT_AREA = 60;
-export const DEFAULT_SHARED_RENT_AREA = 20;
-export const DOWN_PAYMENT_RATIO = 0.30;
-export const LOAN_YEARS = 30;
-export const INTEREST_RATE = 0.032;
-
 // ── 类型（供组件使用）──
+// Re-export 居住成本常量，保持外部导入兼容
+export { DEFAULT_BUY_AREA, DEFAULT_WHOLE_RENT_AREA, DEFAULT_SHARED_RENT_AREA, DOWN_PAYMENT_RATIO, LOAN_YEARS, INTEREST_RATE } from './constants';
 export type BuyMode = 'secondhand' | 'newhome';
 export type LivingMode = 'buy' | 'rent';
 
@@ -76,7 +81,7 @@ function computeBuyResult(unitPrice: number, annualSalary: number): BuyResult {
   const priceIncomeRatio = +(totalPrice / incomeWan).toFixed(1);
   const downPaymentYears = +(downPayment / incomeWan).toFixed(1);
   const mortgageIncomeRatio = +(monthlyPayment / monthlyIncome).toFixed(3);
-  const { label, color } = getSimpleRating(priceIncomeRatio, BUY_RATING_CONFIG);
+  const { label } = getSimpleRating(priceIncomeRatio, BUY_RATING_CONFIG);
   return {
     avgPrice: unitPrice,
     totalPrice,
@@ -93,7 +98,7 @@ function computeRentResult(unitPrice: number, area: number, annualSalary: number
   const monthlyIncome = annualSalary / 12;
   const monthlyRent = Math.round(unitPrice * area);
   const rentIncomeRatio = +(monthlyRent / monthlyIncome).toFixed(3);
-  const { label, color } = getSimpleRating(rentIncomeRatio, RENT_RATING_CONFIG);
+  const { label } = getSimpleRating(rentIncomeRatio, RENT_RATING_CONFIG);
   return { monthlyRent, area, rentIncomeRatio, rating: label };
 }
 
@@ -141,9 +146,9 @@ export function calculateLivingCost(
   const shared = computeRentResult(housing.sharedRentPrice, DEFAULT_SHARED_RENT_AREA, annualSalary);
 
   const livingPressureIndex = +(
-    (secondhand.priceIncomeRatio / 10) * 0.5
-    + (whole.rentIncomeRatio / 0.3) * 0.3
-    + (1 - cityData.consumption / cityData.income) * 0.2
+    (secondhand.priceIncomeRatio / PRESSURE_BUY_BASELINE) * PRESSURE_WEIGHT_BUY
+    + (whole.rentIncomeRatio / PRESSURE_RENT_BASELINE) * PRESSURE_WEIGHT_RENT
+    + (1 - cityData.consumption / cityData.income) * PRESSURE_WEIGHT_SAVINGS
   ).toFixed(3);
 
   const pressure = getSimpleRating(livingPressureIndex, PRESSURE_RATING_CONFIG);

@@ -24,10 +24,10 @@ export function FreshGradResult({ result, input }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-[slideUp_300ms_ease-out]">
       {/* 核心分数 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 text-center">
-        <div className={`text-4xl sm:text-5xl font-bold ${result.rating.color} mb-1`}>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 text-center animate-[scaleIn_250ms_ease-out]">
+        <div className={`text-4xl sm:text-5xl font-bold ${result.rating.color} mb-1 tabular-nums`}>
           {result.score.toFixed(2)}
         </div>
         <div className={`text-xl font-semibold ${result.rating.color} mb-1`}>
@@ -237,9 +237,11 @@ function CalcNode({
         </span>
         <span className="text-sm font-mono text-gray-700">{value}</span>
       </button>
-      {open && children && (
-        <div className="pb-2">
-          {children}
+      {children && (
+        <div className={`expand-grid ${!open ? 'expand-closed' : ''}`}>
+          <div className="expand-inner">
+            <div className="pb-2">{children}</div>
+          </div>
         </div>
       )}
     </div>

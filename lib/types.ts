@@ -120,15 +120,11 @@ export interface FreshGradResult {
 export interface CityCalculationData {
   income: number;
   consumption: number;
-  savingsRatio: number;
   secondhandPrice: number;
   newhomePrice: number;
   wholeRentPrice: number;
   sharedRentPrice: number;
   industrySalaries: Record<string, number>;
-  nationalIncome: number;
-  nationalExpenditure: number;
-  nationalSavingsRatio: number;
 }
 
 // ── 类型组合（用于消除重复）──

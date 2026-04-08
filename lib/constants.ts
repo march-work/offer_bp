@@ -9,8 +9,8 @@ export const STANDARD_HOURS = 8;
 // ── 三列学历选项及分值 ──
 // 分值 1-10，越高代表市场认可度越高
 export const BACHELOR_OPTIONS: { label: string; score: number }[] = [
-  { label: '专科', score: 1.0 },
-  { label: '专升本', score: 1.5 },
+  { label: '专科', score: 0.5 },
+  { label: '专升本', score: 1.0 },
   { label: '双非', score: 2.5 },
   { label: '双非+双一流专业', score: 4.0 },
   { label: '211', score: 5.0 },
@@ -25,11 +25,11 @@ export const BACHELOR_OPTIONS: { label: string; score: number }[] = [
 export const MASTER_OPTIONS: { label: string; score: number }[] = [
   { label: '双非硕士', score: 2.0 },
   { label: '211硕士', score: 4.0 },
-  { label: '985硕士', score: 6.0 },
-  { label: '华五/C9硕士', score: 7.5 },
-  { label: '清北硕士', score: 8.5 },
-  { label: '海外QS/USNews/THE/软科 100', score: 5.0 },
-  { label: '海外QS/USNews/THE/软科 30', score: 7.0 },
+  { label: '985硕士', score: 6 },
+  { label: '华五/C9硕士', score: 7 },
+  { label: '清北硕士', score: 8.5 },  
+  { label: '海外QS/USNews/THE/软科 100', score: 3.0 },
+  { label: '海外QS/USNews/THE/软科 30', score: 4.5 },
   { label: '直博', score: 0 },
 ];
 
@@ -97,11 +97,15 @@ export const CITY_INCOME_MAP: Record<string, number> = {
 const allCityIncomes = Object.values(CITY_INCOME_MAP);
 export const CITY_INCOME_AVG = allCityIncomes.reduce((a, b) => a + b, 0) / allCityIncomes.length;
 
-/** 城市因子 = 城市人均收入 / 11城均值 */
+/** 城市因子 = 城市人均收入 / 11城均值，<1 部分线性缩放到 [0.8, 1.0] */
 export function getCityFactor(city: string): number {
   const income = CITY_INCOME_MAP[city];
   if (!income) return 1.0;
-  return income / CITY_INCOME_AVG;
+  const raw = income / CITY_INCOME_AVG;
+  if (raw >= 1.0) return raw;
+  if (raw <= 0.6) return 0.8;
+  // [0.6, 1.0] → [0.8, 1.0]
+  return 0.8 + (raw - 0.6) * 0.5;
 }
 
 // ── 11 城储蓄率（归一化基数用，合租模式）──
@@ -178,9 +182,9 @@ export const ROLE_CORE_FACTOR: Record<string, number> = {
 
 export const COMPANY_SIZE_FACTOR: Record<string, number> = {
   '大厂/行业头部': 1.2,
-  '中大型企业': 1.1,
-  '中型公司': 1.0,
-  '小公司': 0.9,
+  '中大型企业（>2000人）': 1.1,
+  '中型公司（200-2000人）': 1.0,
+  '小公司（50-200人）': 0.9,
   '初创/微型': 0.8,
 };
 
@@ -193,14 +197,14 @@ export const OVERTIME_CULTURE_FACTOR: Record<string, number> = {
 
 export const GROWTH_OPTIONS = ['晋升路径清晰', '有一定空间', '一般', '空间有限', '几乎没有'] as const;
 export const ROLE_CORE_OPTIONS = ['核心业务线', '重要支撑', '一般', '边缘岗位', '随时可替代'] as const;
-export const COMPANY_SIZE_OPTIONS = ['大厂/行业头部', '中大型企业', '中型公司', '小公司', '初创/微型'] as const;
+export const COMPANY_SIZE_OPTIONS = ['大厂/行业头部', '中大型企业（>2000人）', '中型公司（200-2000人）', '小公司（50-200人）', '初创/微型'] as const;
 export const OVERTIME_CULTURE_OPTIONS = ['准点下班', '偶尔加班', '常态化加班', '严重内卷'] as const;
 
 // ── 工资发放时间系数 ──
 export const SALARY_PAYMENT_FACTOR: Record<string, number> = {
   '当月发放': 1.1,
   '次月15日前': 1.0,
-  '压一个月': 0.9,
+  '压一个月': 0.93,
   '压两个月': 0.8,
 };
 export const SALARY_PAYMENT_OPTIONS = ['当月发放', '次月15日前', '压一个月', '压两个月'] as const;
@@ -222,8 +226,6 @@ interface SimpleRating {
   label: string;
   color: string;
 }
-
-type RatingConfig<T> = { thresholds: number[]; labels: string[]; colors: string[]; defaultValue?: T };
 
 /**
  * 通用评级函数：根据值和阈值配置返回评级
@@ -302,5 +304,73 @@ export const ALLOWANCE_OPTIONS = [0, 500, 800, 1000, 1500, 2000, 2500, 3000, 400
 export const WORK_DAYS_OPTIONS = [4, 5, 6, 7] as const;
 export const WFH_DAYS_OPTIONS = [0, 1, 2, 3, 4, 5] as const;
 export const DAILY_HOURS_OPTIONS = [6, 7, 8, 9, 10, 11, 12, 13, 14] as const;
-export const COMMUTE_HOURS_OPTIONS = [0, 0.5, 1, 1.5, 2, 2.5, 3] as const;
 export const REST_HOURS_OPTIONS = [0.5, 1, 1.5, 2, 2.5] as const;
+
+// ══════════════════════════════════════════════════════════════
+// ── 以下原散落在 calculate.ts / living-cost.ts 的公式参数 ──
+// ══════════════════════════════════════════════════════════════
+
+// ── 班车系数 ──
+export const SHUTTLE_FACTOR_HAS = 0.3;
+export const SHUTTLE_FACTOR_NO = 1.0;
+
+// ── 学历权重（混合学历时本/硕/博各自的占比）──
+export const EDUCATION_WEIGHTS: Record<string, { b: number; m: number; p: number }> = {
+  bachelor: { b: 0.5, m: 0.0, p: 0.0 },
+  master: { b: 0.35, m: 0.65, p: 0.0 },
+  phd: { b: 0.25, m: 0.15, p: 0.6 },
+  direct_phd: { b: 0.35, m: 0.0, p: 0.65 },
+};
+
+// ── 工时公式系数 ──
+export const SICK_LEAVE_DISCOUNT = 0.6;      // 带薪病假折算系数
+export const REST_TIME_DISCOUNT = 0.5;       // 休息时间折扣系数
+
+// ── 定居期望因子映射 ──
+// 10年收入 / 首付 的比值映射到 [SETTLEMENT_MIN, SETTLEMENT_MAX]
+export const SETTLEMENT_RATIO_MIN = 1;       // 比值 ≤ 此值 → 取最小
+export const SETTLEMENT_RATIO_MAX = 3;       // 比值 ≥ 此值 → 取最大
+export const SETTLEMENT_FACTOR_MIN = 0.8;
+export const SETTLEMENT_FACTOR_MAX = 1.2;
+
+// ── 城市储蓄系数分段映射 ──
+// rawSavings → 系数：≤0 → CITY_SAVINGS_MIN, ≥CITY_SAVINGS_RAW_MAX → CITY_SAVINGS_MAX
+export const CITY_SAVINGS_RAW_MAX = 1.5;
+export const CITY_SAVINGS_MIN = 0.6;
+export const CITY_SAVINGS_LOW = 0.8;
+export const CITY_SAVINGS_MAX = 1.2;
+
+// ── 社保/公积金基数系数分段 ──
+export const BASE_RATIO_LOW = 0.5;           // 基数/月薪 < 此值 → 最小
+export const BASE_RATIO_MID = 0.8;           // ≤ 此值 → 1.0
+export const BASE_RATIO_HIGH = 1.1;          // ≤ 此值 → 1.0 + 渐增
+export const BASE_FACTOR_MIN = 0.8;
+export const BASE_FACTOR_MAX = 1.2;
+
+// ── 无社保 / 无公积金 默认系数 ──
+export const NO_SOCIAL_INSURANCE_FACTOR = 0.8;
+export const NO_HOUSING_FUND_FACTOR = 0.9;
+
+// ── 六险或二金系数 ──
+export const EXTRA_INSURANCE_FACTOR = 1.1;
+
+// ── 储蓄率计算：消费支出折扣 ──
+export const CONSUMPTION_DISCOUNT = 0.7;
+
+// ── 城市储蓄率均值（默认值，与 CITY_SAVINGS_RATE_AVG 统一）──
+export const DEFAULT_CITY_SAVINGS_RATE_AVG = CITY_SAVINGS_RATE_AVG;
+
+// ── 居住成本参数 ──
+export const DEFAULT_BUY_AREA = 90;           // 买房面积 ㎡
+export const DEFAULT_WHOLE_RENT_AREA = 60;    // 整租面积 ㎡
+export const DEFAULT_SHARED_RENT_AREA = 20;   // 合租面积 ㎡
+export const DOWN_PAYMENT_RATIO = 0.30;       // 首付比例
+export const LOAN_YEARS = 30;                 // 贷款年限
+export const INTEREST_RATE = 0.032;           // 贷款利率（LPR）
+
+// ── 居住压力指数权重 ──
+export const PRESSURE_WEIGHT_BUY = 0.5;       // 买房总价收入比权重
+export const PRESSURE_WEIGHT_RENT = 0.3;      // 租金收入比权重
+export const PRESSURE_WEIGHT_SAVINGS = 0.2;   // 储蓄率权重
+export const PRESSURE_BUY_BASELINE = 10;      // 买房总价收入比基准
+export const PRESSURE_RENT_BASELINE = 0.3;    // 租金收入比基准
