@@ -1,9 +1,9 @@
 'use client';
 
-import { Suspense, useState, useMemo, useCallback, useEffect } from 'react';
+import { Suspense, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import type { FreshGradInput, CityCalculationData } from '@/lib/types';
+import type { FreshGradInput, FreshGradResult as FreshGradResultType, CityCalculationData } from '@/lib/types';
 import { calculateFreshGradScore, calculateTotalCompensation } from '@/lib/calculate';
 import { FreshGradForm } from '@/components/fresh-graduate/FreshGradForm';
 import { FreshGradResult } from '@/components/fresh-graduate/FreshGradResult';
@@ -67,8 +67,8 @@ const DEFAULT_INPUT: FreshGradInput = {
   hasCafeteria: false,
   cafeteriaQuality: '普通',
   locationPreference: '无所谓',
-  hasSocialInsurance: '',
-  hasHousingFund: '',
+  hasSocialInsurance: '有',
+  hasHousingFund: '有',
   socialInsuranceBase: 0,
   housingFundBase: 0,
   hasExtraInsurance: false,
@@ -173,14 +173,6 @@ function FreshGradPage() {
       setErrorMsg('请先填写月薪（月薪需大于 0）');
       return;
     }
-    if (!input.hasSocialInsurance) {
-      setErrorMsg('请选择是否有五险');
-      return;
-    }
-    if (!input.hasHousingFund) {
-      setErrorMsg('请选择是否有公积金');
-      return;
-    }
     if (input.hasSocialInsurance === '有' && (!input.socialInsuranceBase || input.socialInsuranceBase <= 0)) {
       setErrorMsg('请填写五险基数');
       return;
@@ -245,7 +237,7 @@ function FreshGradPage() {
       </header>
 
       {/* 主体 */}
-      <main className="max-w-6xl mx-auto px-4 py-4 pb-24 sm:py-6">
+      <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
           {/* 左栏: 表单 */}
           <div className="lg:col-span-3">
@@ -287,43 +279,132 @@ function FreshGradPage() {
         </div>
       </main>
 
-      {/* 移动端底部固定栏 */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] animate-[slideUp_300ms_ease-out]">
-        {result ? (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className={`text-2xl font-bold ${result.rating.color}`}>
-                {result.score.toFixed(2)}
-              </span>
-              <span className={`text-sm font-semibold ${result.rating.color}`}>
-                {result.rating.label}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleCalculate}
-              className="shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg active:scale-95 active:bg-blue-800 transition-all"
-            >
-              重新评测
-            </button>
-          </div>
-        ) : (
-          <>
-            {errorMsg && (
-              <div className="text-red-600 text-xs mb-2 text-center animate-pulse">
-                {errorMsg}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={handleCalculate}
-              className="w-full py-3 bg-blue-600 text-white text-base font-semibold rounded-xl active:scale-[0.98] active:bg-blue-800 transition-all"
-            >
-              开始评测
-            </button>
-          </>
-        )}
-      </div>
+      {/* 可拖拽悬浮评测按钮 */}
+      <DraggableFab
+        onCalculate={handleCalculate}
+        errorMsg={errorMsg}
+        onDismissError={() => setErrorMsg(null)}
+        result={result}
+      />
+    </div>
+  );
+}
+
+// ── 可拖拽悬浮按钮（松手吸附左/右边缘）──
+function DraggableFab({
+  onCalculate,
+  errorMsg,
+  onDismissError,
+  result,
+}: {
+  onCalculate: () => void;
+  errorMsg: string | null;
+  onDismissError: () => void;
+  result: FreshGradResultType | null;
+}) {
+  const BALL = 56; // w-14 h-14
+  const EDGE_GAP = 12;
+
+  // 初始位置：右下角
+  const [pos, setPos] = useState<{ x: number; y: number }>(() => ({
+    x: (typeof window !== 'undefined' ? window.innerWidth : 400) - BALL - EDGE_GAP,
+    y: (typeof window !== 'undefined' ? window.innerHeight : 800) - BALL - 24,
+  }));
+  const [snapping, setSnapping] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
+
+  function clampToViewport(x: number, y: number) {
+    return {
+      x: Math.max(EDGE_GAP, Math.min(x, window.innerWidth - BALL - EDGE_GAP)),
+      y: Math.max(EDGE_GAP, Math.min(y, window.innerHeight - BALL - EDGE_GAP)),
+    };
+  }
+
+  /** 吸附到最近的左/右边缘 */
+  function snapToEdge(x: number, y: number) {
+    const midX = window.innerWidth / 2;
+    const edgeX = x + BALL / 2 < midX ? EDGE_GAP : window.innerWidth - BALL - EDGE_GAP;
+    return { x: edgeX, y };
+  }
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    setSnapping(false); // 拖动开始，关闭过渡动画
+    dragRef.current = {
+      startX: e.clientX, startY: e.clientY,
+      originX: pos.x, originY: pos.y,
+      moved: false,
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [pos]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) d.moved = true;
+    if (!d.moved) return;
+    setPos(clampToViewport(d.originX + dx, d.originY + dy));
+  }, []);
+
+  const onPointerUp = useCallback(() => {
+    const d = dragRef.current;
+    if (!d) return;
+    if (!d.moved) {
+      onCalculate();
+      dragRef.current = null;
+      return;
+    }
+    // 吸附到边缘，带过渡动画
+    setSnapping(true);
+    const snapped = snapToEdge(d.originX + (d.moved ? (dragRef.current!.originX - d.originX) : 0), pos.y);
+    // 用当前位置的实际拖拽终点重新算
+    const finalX = d.originX + (dragRef.current ? 0 : 0);
+    setPos(snapToEdge(pos.x, pos.y));
+    dragRef.current = null;
+  }, [onCalculate, pos]);
+
+  const onTransitionEnd = useCallback(() => {
+    setSnapping(false);
+  }, []);
+
+  // 气泡方向：靠左 → 内容左对齐，靠右 → 内容右对齐
+  const isNearRight = typeof window !== 'undefined' && pos.x + BALL / 2 > window.innerWidth / 2;
+  const alignClass = isNearRight ? 'items-end' : 'items-start';
+
+  return (
+    <div
+      className={`fixed z-20 flex flex-col ${alignClass} gap-2 select-none touch-none`}
+      style={{
+        left: pos.x,
+        top: pos.y,
+        transition: snapping ? 'left 0.3s cubic-bezier(0.25, 1, 0.5, 1)' : 'none',
+      }}
+      onTransitionEnd={onTransitionEnd}
+    >
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2 max-w-[220px] shadow-lg">
+          {errorMsg}
+          <button type="button" onClick={onDismissError} className="ml-1 text-red-400 hover:text-red-600">×</button>
+        </div>
+      )}
+      {result && (
+        <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-lg text-center">
+          <span className={`text-lg font-bold ${result.rating.color}`}>{result.score.toFixed(2)}</span>
+          <span className={`ml-1.5 text-xs font-semibold ${result.rating.color}`}>{result.rating.label}</span>
+        </div>
+      )}
+      <button
+        type="button"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        className="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 active:scale-90 active:bg-blue-800 transition-colors flex items-center justify-center cursor-grab active:cursor-grabbing"
+        title="拖拽移动，点击计算"
+      >
+        <span className="text-xs font-bold leading-none">计算</span>
+      </button>
     </div>
   );
 }

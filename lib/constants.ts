@@ -343,7 +343,7 @@ export const CITY_SAVINGS_MAX = 1.2;
 // ── 社保/公积金基数系数分段 ──
 export const BASE_RATIO_LOW = 0.5;           // 基数/月薪 < 此值 → 最小
 export const BASE_RATIO_MID = 0.8;           // ≤ 此值 → 1.0
-export const BASE_RATIO_HIGH = 1.1;          // ≤ 此值 → 1.0 + 渐增
+export const BASE_RATIO_HIGH = 1.05;         // ≤ 此值 → 1.0
 export const BASE_FACTOR_MIN = 0.8;
 export const BASE_FACTOR_MAX = 1.2;
 

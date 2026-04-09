@@ -140,7 +140,7 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           <SelectField
             label="五险"
             value={input.hasSocialInsurance}
-            options={['', '有', '无']}
+            options={['有', '无']}
             onChange={(v) => {
               onChange('hasSocialInsurance', v);
               if (v === '有' && !input.socialInsuranceBase) {
@@ -150,21 +150,17 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
                 }
               }
             }}
-            hint={!input.hasSocialInsurance ? '请选择' : undefined}
-            placeholder="请选择"
           />
           <SelectField
             label="公积金"
             value={input.hasHousingFund}
-            options={['', '有', '无']}
+            options={['有', '无']}
             onChange={(v) => {
               onChange('hasHousingFund', v);
               if (v === '有' && !input.housingFundBase) {
                 onChange('housingFundBase', input.socialInsuranceBase || input.monthlyBaseSalary);
               }
             }}
-            hint={!input.hasHousingFund ? '请选择' : undefined}
-            placeholder="请选择"
           />
         </div>
         {input.hasSocialInsurance === '有' && (
@@ -351,14 +347,6 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
         />
       </FormSection>
 
-      {/* ── 桌面端计算按钮 ── */}
-      <button
-        type="button"
-        onClick={onCalculate}
-        className="hidden lg:block w-full py-3.5 bg-blue-600 text-white text-base font-semibold rounded-xl hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800 transition-all shadow-sm"
-      >
-        开始评测
-      </button>
 
     </div>
   );

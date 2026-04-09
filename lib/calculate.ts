@@ -230,8 +230,8 @@ export function calculateEnvFactor(
   /** 基数系数：基数/月薪 比值分段线性映射 */
   function calcBaseFactor(ratio: number): number {
     if (ratio < BASE_RATIO_LOW) return BASE_FACTOR_MIN;
-    if (ratio <= BASE_RATIO_MID) return 1.0;
-    if (ratio <= BASE_RATIO_HIGH) return 1.0 + (ratio - BASE_RATIO_MID) / (BASE_RATIO_HIGH - BASE_RATIO_MID) * (BASE_FACTOR_MAX - 1.0);
+    if (ratio <= BASE_RATIO_MID) return BASE_FACTOR_MIN + (ratio - BASE_RATIO_LOW) / (BASE_RATIO_MID - BASE_RATIO_LOW) * (1.0 - BASE_FACTOR_MIN);
+    if (ratio <= BASE_RATIO_HIGH) return 1.0;
     return BASE_FACTOR_MAX;
   }
 
