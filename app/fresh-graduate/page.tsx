@@ -305,18 +305,49 @@ function DraggableFab({
   const BALL = 56; // w-14 h-14
   const EDGE_GAP = 12;
 
-  // 初始位置：右下角
-  const [pos, setPos] = useState<{ x: number; y: number }>(() => ({
-    x: (typeof window !== 'undefined' ? window.innerWidth : 400) - BALL - EDGE_GAP,
-    y: (typeof window !== 'undefined' ? window.innerHeight : 800) - BALL - 24,
-  }));
+  const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState<{ x: number; y: number }>({ x: -9999, y: -9999 });
   const [snapping, setSnapping] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
+
+  // 使用 visualViewport 获取真实可视区域高度（移动端排除 URL 栏/底部栏）
+  const getVH = useCallback(() => (window.visualViewport?.height ?? window.innerHeight), []);
+
+  // 初始定位 + 视口变化时重新约束位置
+  useEffect(() => {
+    const vw = window.innerWidth;
+    const vh = getVH();
+    setPos({ x: vw - BALL - EDGE_GAP, y: vh - BALL - 24 });
+    setMounted(true);
+
+    const handleViewportChange = () => {
+      const newVW = window.innerWidth;
+      const newVH = getVH();
+      setPos(prev => ({
+        x: Math.max(EDGE_GAP, Math.min(prev.x, newVW - BALL - EDGE_GAP)),
+        y: Math.max(EDGE_GAP, Math.min(prev.y, newVH - BALL - EDGE_GAP)),
+      }));
+    };
+
+    window.addEventListener('resize', handleViewportChange);
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handleViewportChange);
+      vv.addEventListener('scroll', handleViewportChange);
+    }
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      if (vv) {
+        vv.removeEventListener('resize', handleViewportChange);
+        vv.removeEventListener('scroll', handleViewportChange);
+      }
+    };
+  }, [getVH]);
 
   function clampToViewport(x: number, y: number) {
     return {
       x: Math.max(EDGE_GAP, Math.min(x, window.innerWidth - BALL - EDGE_GAP)),
-      y: Math.max(EDGE_GAP, Math.min(y, window.innerHeight - BALL - EDGE_GAP)),
+      y: Math.max(EDGE_GAP, Math.min(y, getVH() - BALL - EDGE_GAP)),
     };
   }
 
@@ -329,7 +360,7 @@ function DraggableFab({
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
-    setSnapping(false); // 拖动开始，关闭过渡动画
+    setSnapping(false);
     dragRef.current = {
       startX: e.clientX, startY: e.clientY,
       originX: pos.x, originY: pos.y,
@@ -346,7 +377,7 @@ function DraggableFab({
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) d.moved = true;
     if (!d.moved) return;
     setPos(clampToViewport(d.originX + dx, d.originY + dy));
-  }, []);
+  }, [getVH]);
 
   const onPointerUp = useCallback(() => {
     const d = dragRef.current;
@@ -356,11 +387,7 @@ function DraggableFab({
       dragRef.current = null;
       return;
     }
-    // 吸附到边缘，带过渡动画
     setSnapping(true);
-    const snapped = snapToEdge(d.originX + (d.moved ? (dragRef.current!.originX - d.originX) : 0), pos.y);
-    // 用当前位置的实际拖拽终点重新算
-    const finalX = d.originX + (dragRef.current ? 0 : 0);
     setPos(snapToEdge(pos.x, pos.y));
     dragRef.current = null;
   }, [onCalculate, pos]);
@@ -370,12 +397,14 @@ function DraggableFab({
   }, []);
 
   // 气泡方向：靠左 → 内容左对齐，靠右 → 内容右对齐
-  const isNearRight = typeof window !== 'undefined' && pos.x + BALL / 2 > window.innerWidth / 2;
+  const isNearRight = mounted && pos.x + BALL / 2 > window.innerWidth / 2;
   const alignClass = isNearRight ? 'items-end' : 'items-start';
+
+  if (!mounted) return null;
 
   return (
     <div
-      className={`fixed z-20 flex flex-col ${alignClass} gap-2 select-none touch-none`}
+      className={`fixed z-20 flex flex-col ${alignClass} gap-2 select-none`}
       style={{
         left: pos.x,
         top: pos.y,
@@ -400,7 +429,7 @@ function DraggableFab({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 active:scale-90 active:bg-blue-800 transition-colors flex items-center justify-center cursor-grab active:cursor-grabbing"
+        className="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 active:scale-90 active:bg-blue-800 transition-colors flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
         title="拖拽移动，点击计算"
       >
         <span className="text-xs font-bold leading-none">计算</span>
