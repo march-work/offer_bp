@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useCompareItems } from '@/lib/compare-store';
 
 export default function HomePage() {
   const [freshExpanded, setFreshExpanded] = useState(false);
+  const compareItems = useCompareItems();
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 animate-[fadeIn_400ms_ease-out]">
@@ -90,6 +92,36 @@ export default function HomePage() {
             </Link>
           </div>
         )}
+
+        {/* Offer 对比 */}
+        <Link
+          href="/compare"
+          className="group block rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">⚖️</span>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  Offer 对比
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  输入多个 offer，逐维度量化对比，一眼看出哪个更值得接。
+                </p>
+              </div>
+            </div>
+            <div className="text-right shrink-0 ml-4">
+              <div className="text-xs font-medium text-blue-600 group-hover:text-blue-700">
+                开始对比 →
+              </div>
+              {compareItems.length > 0 && (
+                <div className="text-[10px] text-gray-400 mt-1">
+                  已有 {compareItems.length} 个 offer
+                </div>
+              )}
+            </div>
+          </div>
+        </Link>
 
         {/* 跳槽（即将上线） */}
         <div className="block rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm opacity-60 cursor-not-allowed">

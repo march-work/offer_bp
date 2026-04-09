@@ -141,3 +141,20 @@ export interface RatingInfo {
   colorHex: string;
   description: string;
 }
+
+// ── Offer 对比相关类型 ──
+
+export interface CompareItem {
+  id: string;
+  label: string;
+  input: FreshGradInput;
+  result: FreshGradResult;
+}
+
+/** 学历+专业等共享字段（新增 offer 时预填） */
+export interface SharedFields {
+  bachelorLevel: string;
+  masterLevel: string;
+  phdLevel: string;
+  targetIndustry: Industry;
+}

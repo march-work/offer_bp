@@ -84,7 +84,6 @@ export interface CityDataBundle {
   housing: HousingJson;
   income: IncomeExpenditureJson;
   industrySalary: IndustrySalaryJson;
-  commute: CommuteJson;
 }
 
 // ── 缓存 + fetch ──
@@ -126,13 +125,12 @@ export function loadNational(): Promise<NationalJson> {
 // ── 聚合加载 ──
 
 export async function loadAllCityData(city: string): Promise<CityDataBundle> {
-  const [housing, income, industrySalary, commute] = await Promise.all([
+  const [housing, income, industrySalary] = await Promise.all([
     loadHousing(city),
     loadIncomeExpenditure(city),
     loadIndustrySalary(city),
-    loadCommute(city),
   ]);
-  return { housing, income, industrySalary, commute };
+  return { housing, income, industrySalary };
 }
 
 // ── 工具函数 ──

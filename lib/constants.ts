@@ -1,6 +1,6 @@
 // ── 应届生评测器常量表 ──
 
-import type { RatingInfo } from './types';
+import type { RatingInfo, FreshGradInput } from './types';
 
 // ── 标准年工作日基准 ──
 export const STANDARD_WORKING_DAYS = 260;
@@ -66,16 +66,6 @@ export const CITY_OPTIONS = [
   '北京', '上海', '深圳', '广州', '杭州',
   '南京', '成都', '武汉', '西安', '合肥', '青岛', '其他',
 ] as const;
-
-// ── 全国平均存钱系数 ──
-// 数据来源：国家统计局 2024 年
-// 系数 = 全体居民人均可支配收入 / 全体居民人均消费支出
-export const NATIONAL_SAVINGS_RATIO = 1.46;
-
-// ── 全国居民收入/支出数据（元/年）──
-// 数据来源：国家统计局 2024 年
-export const NATIONAL_INCOME = 41314;
-export const NATIONAL_EXPENDITURE = 28227;
 
 // ── 11 城人均可支配收入（元/年）──
 // 数据来源：各城市统计局 2024 年
@@ -357,8 +347,60 @@ export const EXTRA_INSURANCE_FACTOR = 1.1;
 // ── 储蓄率计算：消费支出折扣 ──
 export const CONSUMPTION_DISCOUNT = 0.7;
 
-// ── 城市储蓄率均值（默认值，与 CITY_SAVINGS_RATE_AVG 统一）──
-export const DEFAULT_CITY_SAVINGS_RATE_AVG = CITY_SAVINGS_RATE_AVG;
+// ── 表单默认值 ──
+
+/** 完整的 FreshGradInput 默认值（单一数据源） */
+export const DEFAULT_FRESH_GRAD_INPUT: FreshGradInput = {
+  bachelorLevel: '双非',
+  masterLevel: '无',
+  phdLevel: '无',
+  targetCity: '上海',
+  targetIndustry: '信息传输、软件和信息技术服务专业',
+  monthlyBaseSalary: 0,
+  monthsPerYear: 12,
+  yearEndBonus: 0,
+  annualStock: 0,
+  monthlyAllowance: 0,
+  workDaysPerWeek: 5,
+  wfhDaysPerWeek: 0,
+  annualLeave: 5,
+  publicHolidays: 13,
+  paidSickLeave: 0,
+  dailyWorkHours: 9,
+  commuteHours: 1.5,
+  restHours: 1.5,
+  workEnvironment: '普通',
+  hasShuttle: false,
+  hasCafeteria: false,
+  cafeteriaQuality: '普通',
+  locationPreference: '无所谓',
+  hasSocialInsurance: '有',
+  hasHousingFund: '有',
+  socialInsuranceBase: 0,
+  housingFundBase: 0,
+  hasExtraInsurance: false,
+  salaryPaymentTiming: '次月15日前',
+  growthFactor: '一般',
+  roleCoreFactor: '一般',
+  companySizeFactor: '中型公司（200-2000人）',
+  overtimeCultureFactor: '偶尔加班',
+  housingMode: 'shared',
+};
+
+/** 极速版覆盖字段（与 DEFAULT_FRESH_GRAD_INPUT 合并使用） */
+export const QUICK_MODE_OVERRIDES: Partial<FreshGradInput> = {
+  locationPreference: '无所谓',
+  annualStock: 0,
+  monthlyAllowance: 0,
+  hasExtraInsurance: false,
+  salaryPaymentTiming: '次月15日前',
+  wfhDaysPerWeek: 0,
+  publicHolidays: 13,
+  paidSickLeave: 0,
+  commuteHours: 0,
+  growthFactor: '一般',
+  roleCoreFactor: '一般',
+};
 
 // ── 居住成本参数 ──
 export const DEFAULT_BUY_AREA = 90;           // 买房面积 ㎡

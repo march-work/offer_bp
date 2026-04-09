@@ -43,7 +43,7 @@ import {
   NO_HOUSING_FUND_FACTOR,
   EXTRA_INSURANCE_FACTOR,
   CONSUMPTION_DISCOUNT,
-  DEFAULT_CITY_SAVINGS_RATE_AVG,
+  CITY_SAVINGS_RATE_AVG,
   DEFAULT_BUY_AREA,
   DEFAULT_WHOLE_RENT_AREA,
   DEFAULT_SHARED_RENT_AREA,
@@ -219,7 +219,7 @@ function mapCitySavings(value: number): number {
 export function calculateEnvFactor(
   input: FreshGradInput,
   cityData: CityCalculationData,
-  citySavingsRateAvg: number = DEFAULT_CITY_SAVINGS_RATE_AVG,
+  citySavingsRateAvg: number = CITY_SAVINGS_RATE_AVG,
   annualSalary: number = 0,
 ): { value: number; factors: FreshGradResult['envFactors'] } {
   const workEnv = WORK_ENV_FACTOR[input.workEnvironment] ?? 1.0;
@@ -299,7 +299,7 @@ export function getRating(score: number): RatingInfo {
 export function calculateFreshGradScore(
   input: FreshGradInput,
   cityData: CityCalculationData,
-  citySavingsRateAvg: number = DEFAULT_CITY_SAVINGS_RATE_AVG,
+  citySavingsRateAvg: number = CITY_SAVINGS_RATE_AVG,
 ): FreshGradResult {
   const tc = calculateTotalCompensation(input);
   const workingDays = calculateWorkingDays(input);

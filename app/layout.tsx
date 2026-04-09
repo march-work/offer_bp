@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { CompareProvider } from '@/lib/compare-store';
 
 export const metadata: Metadata = {
   title: 'Offer BP — 这 offer 接不接？',
@@ -20,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
-        {children}
+        <CompareProvider>
+          {children}
+        </CompareProvider>
       </body>
     </html>
   );

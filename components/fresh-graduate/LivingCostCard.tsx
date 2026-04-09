@@ -196,7 +196,7 @@ function BuyDetails({ result }: { result: BuyResult }) {
           <span className="font-mono text-gray-900">{result.downPayment} 万 ≈ {result.downPaymentYears.toFixed(1)} 年收入</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-500">月供（30年/LPR 3.1%）</span>
+          <span className="text-gray-500">月供（30年/LPR 3.2%）</span>
           <span className="font-mono text-gray-900">¥{result.monthlyPayment.toLocaleString()}/月</span>
         </div>
         <div>

@@ -44,7 +44,6 @@ function createTestInput(overrides: Partial<FreshGradInput> = {}): FreshGradInpu
     housingFundBase: 12500,
     hasExtraInsurance: false,
   salaryPaymentTiming: '次月15日前',
-  salaryPaymentTiming: '次月15日前',
     housingMode: 'shared' as const,
     locationPreference: '无所谓',
     growthFactor: '一般',
@@ -59,7 +58,6 @@ function createTestCityData(overrides: Partial<CityCalculationData> = {}): CityC
   return {
     income: 50000,
     consumption: 32000,
-    savingsRatio: 0.36,
     secondhandPrice: 1.5,
     newhomePrice: 1.8,
     wholeRentPrice: 35,
@@ -68,9 +66,6 @@ function createTestCityData(overrides: Partial<CityCalculationData> = {}): CityC
       '信息传输、软件和信息技术服务专业': 120000,
       '金融专业': 100000,
     },
-    nationalIncome: 41314,
-    nationalExpenditure: 28227,
-    nationalSavingsRatio: 1.46,
     ...overrides,
   };
 }
@@ -192,14 +187,14 @@ describe('calculateEffectiveHours', () => {
 describe('calculateEducationScore', () => {
   it('scores bachelor only (双非)', () => {
     const input = createTestInput({ bachelorLevel: '双非', masterLevel: '无', phdLevel: '无' });
-    // 3.0 * 0.5 = 1.5
-    expect(calculateEducationScore(input)).toBeCloseTo(1.5);
+    // 2.5 * 0.5 = 1.25
+    expect(calculateEducationScore(input)).toBeCloseTo(1.25);
   });
 
   it('scores bachelor + master (双非 + 985硕士)', () => {
     const input = createTestInput({ bachelorLevel: '双非', masterLevel: '985硕士', phdLevel: '无' });
-    // 3.0 * 0.35 + 6.0 * 0.65 = 1.05 + 3.9 = 4.95
-    expect(calculateEducationScore(input)).toBeCloseTo(4.95);
+    // 2.5 * 0.35 + 6.0 * 0.65 = 0.875 + 3.9 = 4.775
+    expect(calculateEducationScore(input)).toBeCloseTo(4.775);
   });
 
   it('scores bachelor + master + phd', () => {
@@ -271,7 +266,7 @@ describe('calculateFreshGradScore', () => {
     expect(result.score).toBeGreaterThan(0);
     expect(result.totalCompensation).toBe(15000 * 14 + 30000);
     expect(result.rating.label).toBeDefined();
-    expect(result.educationScore).toBeCloseTo(1.5); // 双非 bachelor only
+    expect(result.educationScore).toBeCloseTo(1.25); // 双非 bachelor only
   });
 
   it('produces higher score for higher salary', () => {

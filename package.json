@@ -1,7 +1,6 @@
 {
   "name": "offer_bp",
   "version": "1.0.0",
-  "main": "index.js",
   "directories": {
     "doc": "docs"
   },
@@ -33,7 +32,6 @@
     "eslint-config-next": "^16.2.2",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
-    "playwright": "^1.59.1",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "ts-jest": "^29.4.7",

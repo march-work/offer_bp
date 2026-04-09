@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import type { FreshGradResult, FreshGradInput } from '@/lib/types';
+import { useCompareStore } from '@/lib/compare-store';
 
 interface Props {
   result: FreshGradResult | null;
@@ -9,6 +11,8 @@ interface Props {
 }
 
 export function FreshGradResult({ result, input }: Props) {
+  const { items } = useCompareStore();
+
   if (!result) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
@@ -23,6 +27,10 @@ export function FreshGradResult({ result, input }: Props) {
     );
   }
 
+  // 判断是否已自动保存
+  const label = input ? `${input.targetCity}-${input.targetIndustry.slice(0, 4)}` : '';
+  const isSaved = items.some((it) => it.label === label);
+
   return (
     <div className="space-y-4 animate-[slideUp_300ms_ease-out]">
       {/* 核心分数 */}
@@ -34,6 +42,27 @@ export function FreshGradResult({ result, input }: Props) {
           {result.rating.label}
         </div>
         <div className="text-sm text-gray-500">{result.rating.description}</div>
+      </div>
+
+      {/* 对比状态 */}
+      <div className="flex items-center gap-2">
+        <div
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium text-center transition-colors ${
+            isSaved
+              ? 'bg-green-100 text-green-700 border border-green-200'
+              : 'bg-gray-100 text-gray-400 border border-gray-200'
+          }`}
+        >
+          {isSaved ? '已自动保存至对比' : '计算后自动保存'}
+        </div>
+        {items.length > 0 && (
+          <Link
+            href="/compare"
+            className="py-2 px-3 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            查看对比 ({items.length})
+          </Link>
+        )}
       </div>
 
       {/* 薪资对比 */}

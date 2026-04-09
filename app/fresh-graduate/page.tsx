@@ -4,6 +4,7 @@ import { Suspense, useState, useMemo, useCallback, useEffect, useRef } from 'rea
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { FreshGradInput, FreshGradResult as FreshGradResultType, CityCalculationData } from '@/lib/types';
+import { DEFAULT_FRESH_GRAD_INPUT, QUICK_MODE_OVERRIDES } from '@/lib/constants';
 import { calculateFreshGradScore, calculateTotalCompensation } from '@/lib/calculate';
 import { FreshGradForm } from '@/components/fresh-graduate/FreshGradForm';
 import { FreshGradResult } from '@/components/fresh-graduate/FreshGradResult';
@@ -16,24 +17,11 @@ import {
   type CityDataBundle,
 } from '@/lib/city-data';
 import { CITY_OPTIONS } from '@/lib/constants';
+import { useCompareStore } from '@/lib/compare-store';
 
 export type EvalMode = 'quick' | 'detailed';
 
-/** 极速版隐藏的字段及其中性默认值（所有系数为 1.0，金额为 0，天数为标准值） */
-const QUICK_DEFAULTS: Partial<FreshGradInput> = {
-  locationPreference: '无所谓',
-  annualStock: 0,
-  monthlyAllowance: 0,
-  hasExtraInsurance: false,
-  salaryPaymentTiming: '次月15日前',
-  wfhDaysPerWeek: 0,
-  publicHolidays: 13,
-  paidSickLeave: 0,
-  commuteHours: 0,
-  growthFactor: '一般',
-  roleCoreFactor: '一般',
-};
-
+/** 极速版隐藏字段默认值将由 DEFAULT_FRESH_GRAD_INPUT 与 QUICK_MODE_OVERRIDES 合并得到 */
 // ── Suspense wrapper ──
 export default function FreshGradPageWrapper() {
   return (
@@ -43,50 +31,13 @@ export default function FreshGradPageWrapper() {
   );
 }
 
-const DEFAULT_INPUT: FreshGradInput = {
-  bachelorLevel: '双非',
-  masterLevel: '无',
-  phdLevel: '无',
-  targetCity: '上海',
-  targetIndustry: '信息传输、软件和信息技术服务专业',
-  monthlyBaseSalary: 0,
-  monthsPerYear: 12,
-  yearEndBonus: 0,
-  annualStock: 0,
-  monthlyAllowance: 0,
-  workDaysPerWeek: 5,
-  wfhDaysPerWeek: 0,
-  annualLeave: 5,
-  publicHolidays: 13,
-  paidSickLeave: 0,
-  dailyWorkHours: 9,
-  commuteHours: 1.5,
-  restHours: 1.5,
-  workEnvironment: '普通',
-  hasShuttle: false,
-  hasCafeteria: false,
-  cafeteriaQuality: '普通',
-  locationPreference: '无所谓',
-  hasSocialInsurance: '有',
-  hasHousingFund: '有',
-  socialInsuranceBase: 0,
-  housingFundBase: 0,
-  hasExtraInsurance: false,
-  salaryPaymentTiming: '次月15日前',
-  growthFactor: '一般',
-  roleCoreFactor: '一般',
-  companySizeFactor: '中型公司（200-2000人）',
-  overtimeCultureFactor: '偶尔加班',
-  housingMode: 'shared',
-};
-
 function FreshGradPage() {
   const searchParams = useSearchParams();
   const mode: EvalMode = searchParams.get('mode') === 'quick' ? 'quick' : 'detailed';
 
   const [input, setInput] = useState<FreshGradInput>({
-    ...DEFAULT_INPUT,
-    ...(mode === 'quick' ? QUICK_DEFAULTS : {}),
+    ...DEFAULT_FRESH_GRAD_INPUT,
+    ...(mode === 'quick' ? QUICK_MODE_OVERRIDES : {}),
   });
   const [calculatedInput, setCalculatedInput] = useState<FreshGradInput | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -195,6 +146,39 @@ function FreshGradPage() {
   const tc = useMemo(() => {
     return calculateTotalCompensation(input);
   }, [input]);
+
+  // ── 自动保存到对比 store ──
+  const { addItem, updateItem, items } = useCompareStore();
+  const autoSavedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!result || !calculatedInput) return;
+
+    const label = `${calculatedInput.targetCity}-${calculatedInput.targetIndustry.slice(0, 4)}`;
+
+    if (autoSavedIdRef.current) {
+      updateItem(autoSavedIdRef.current, { label, input: { ...calculatedInput }, result: { ...result } });
+    } else {
+      const existing = items.find((it) => it.label === label);
+      if (existing) {
+        updateItem(existing.id, { label, input: { ...calculatedInput }, result: { ...result } });
+        autoSavedIdRef.current = existing.id;
+      } else {
+        addItem(label, calculatedInput, result);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
+
+  // 首次 addItem 后，从 items 中拿到 ID
+  useEffect(() => {
+    if (autoSavedIdRef.current || !result || !calculatedInput) return;
+    const label = `${calculatedInput.targetCity}-${calculatedInput.targetIndustry.slice(0, 4)}`;
+    const found = items.find((it) => it.label === label);
+    if (found) {
+      autoSavedIdRef.current = found.id;
+    }
+  }, [items, result, calculatedInput]);
 
   // LivingCostCard 需要的数据
   const livingCostHousing = useMemo(() => {
