@@ -22,13 +22,13 @@ export default function HomePage() {
 
       {/* 场景选择 */}
       <div className="w-full max-w-2xl space-y-4">
-        {/* 应届生 — 点击展开子选项 */}
-        <button
-          type="button"
-          onClick={() => setFreshExpanded(!freshExpanded)}
-          className="group w-full text-left block rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-blue-300 active:scale-[0.985] transition-all"
-        >
-          <div className="flex items-center justify-between">
+        {/* 应届生 — 点击分裂成两个 */}
+        {!freshExpanded && (
+          <button
+            type="button"
+            onClick={() => setFreshExpanded(true)}
+            className="group w-full text-left block rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-blue-300 active:scale-[0.985] transition-all"
+          >
             <div className="flex items-center gap-3">
               <span className="text-3xl">🎓</span>
               <div>
@@ -40,22 +40,17 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            <span className={`text-gray-400 transition-transform duration-200 ${freshExpanded ? 'rotate-180' : ''}`}>
-              ▼
-            </span>
-          </div>
-        </button>
+          </button>
+        )}
 
-        {/* 展开的子选项 */}
         {freshExpanded && (
-          <div className="grid grid-cols-2 gap-4 animate-[slideUp_250ms_ease-out]">
-            {/* 极速版 */}
+          <div className="grid grid-cols-2 gap-3 animate-[splitIn_300ms_ease-out]">
             <Link
               href="/fresh-graduate?mode=quick"
-              className="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+              className="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-green-400 transition-all"
             >
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-base font-semibold text-gray-900 group-hover:text-green-600 transition-colors">
                   极速版
                 </h3>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 font-medium">
@@ -65,15 +60,14 @@ export default function HomePage() {
               <p className="text-xs text-gray-500 leading-relaxed mb-3">
                 核心薪资 + 城市 + 工时，快速出分
               </p>
-              <div className="text-xs font-medium text-blue-600">
+              <div className="text-xs font-medium text-green-600">
                 开始评测 →
               </div>
             </Link>
 
-            {/* 详细版 */}
             <Link
               href="/fresh-graduate?mode=detailed"
-              className="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+              className="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-400 transition-all"
             >
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
@@ -90,6 +84,15 @@ export default function HomePage() {
                 开始评测 →
               </div>
             </Link>
+
+            {/* 收起按钮 */}
+            <button
+              type="button"
+              onClick={() => setFreshExpanded(false)}
+              className="col-span-2 text-xs text-gray-400 hover:text-gray-600 transition-colors py-1"
+            >
+              收起
+            </button>
           </div>
         )}
 

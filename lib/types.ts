@@ -55,8 +55,8 @@ export interface FreshGradInput {
   hasCafeteria: boolean;
   cafeteriaQuality: string;
   locationPreference: string;
-  hasSocialInsurance: string;  // '有' | '无' | ''
-  hasHousingFund: string;     // '有' | '无' | ''
+  hasSocialInsurance: string;  // '有' | '无' | '' (空=未选择，必须选择后才能计算)
+  hasHousingFund: string;     // '有' | '无' | '' (空=未选择，必须选择后才能计算)
   socialInsuranceBase: number; // 五险基数
   housingFundBase: number;    // 公积金基数
   hasExtraInsurance: boolean;  // 六险或二金

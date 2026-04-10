@@ -42,6 +42,15 @@ export function CompareCard({
   const isQuick = mode === 'quick';
   const tc = useMemo(() => calculateTotalCompensation(input), [input]);
 
+  const canCalculate = tc > 0 && !!input.hasSocialInsurance && !!input.hasHousingFund;
+  const calcDisabledReason = tc <= 0
+    ? '请填写月薪'
+    : !input.hasSocialInsurance
+      ? '请选择五险'
+      : !input.hasHousingFund
+        ? '请选择公积金'
+        : null;
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-w-[280px]">
       {/* 头部: 名称 + 删除 */}
@@ -146,23 +155,23 @@ export function CompareCard({
             <SelectField
               label="五险"
               value={input.hasSocialInsurance}
-              options={['有', '无']}
+              options={['', '有', '无']}
               onChange={(v) => {
                 onInputChange('hasSocialInsurance', v);
-                if (v === '有' && !input.socialInsuranceBase) {
-                  onInputChange('socialInsuranceBase', input.monthlyBaseSalary);
-                  onInputChange('housingFundBase', input.monthlyBaseSalary);
+                if (v === '有') {
+                  onInputChange('socialInsuranceBase', input.socialInsuranceBase || input.monthlyBaseSalary);
+                  onInputChange('housingFundBase', input.housingFundBase || input.socialInsuranceBase || input.monthlyBaseSalary);
                 }
               }}
             />
             <SelectField
               label="公积金"
               value={input.hasHousingFund}
-              options={['有', '无']}
+              options={['', '有', '无']}
               onChange={(v) => {
                 onInputChange('hasHousingFund', v);
-                if (v === '有' && !input.housingFundBase) {
-                  onInputChange('housingFundBase', input.socialInsuranceBase || input.monthlyBaseSalary);
+                if (v === '有') {
+                  onInputChange('housingFundBase', input.housingFundBase || input.socialInsuranceBase || input.monthlyBaseSalary);
                 }
               }}
             />
@@ -264,14 +273,14 @@ export function CompareCard({
           <button
             type="button"
             onClick={onCalculate}
-            disabled={tc <= 0}
+            disabled={!canCalculate}
             className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              tc > 0
+              canCalculate
                 ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {tc > 0 ? '计算评分' : '请填写月薪'}
+            {calcDisabledReason || '计算评分'}
           </button>
         )}
       </div>

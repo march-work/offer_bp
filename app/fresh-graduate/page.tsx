@@ -124,6 +124,14 @@ function FreshGradPage() {
       setErrorMsg('请先填写月薪（月薪需大于 0）');
       return;
     }
+    if (!input.hasSocialInsurance) {
+      setErrorMsg('请选择是否有五险');
+      return;
+    }
+    if (!input.hasHousingFund) {
+      setErrorMsg('请选择是否有公积金');
+      return;
+    }
     if (input.hasSocialInsurance === '有' && (!input.socialInsuranceBase || input.socialInsuranceBase <= 0)) {
       setErrorMsg('请填写五险基数');
       return;
@@ -286,8 +294,9 @@ function DraggableFab({
   onDismissError: () => void;
   result: FreshGradResultType | null;
 }) {
-  const BALL = 56; // w-14 h-14
-  const EDGE_GAP = 12;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const BALL = isMobile ? 56 : 72;
+  const EDGE_GAP = isMobile ? 12 : 20;
 
   const [mounted, setMounted] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: -9999, y: -9999 });
@@ -413,10 +422,11 @@ function DraggableFab({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 active:scale-90 active:bg-blue-800 transition-colors flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+        className="rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 active:scale-90 active:bg-blue-800 transition-colors flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+        style={{ width: BALL, height: BALL }}
         title="拖拽移动，点击计算"
       >
-        <span className="text-xs font-bold leading-none">计算</span>
+        <span className={`font-bold leading-none ${isMobile ? 'text-xs' : 'text-sm'}`}>计算</span>
       </button>
     </div>
   );

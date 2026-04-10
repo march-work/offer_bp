@@ -140,13 +140,13 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           <SelectField
             label="五险"
             value={input.hasSocialInsurance}
-            options={['有', '无']}
+            options={['', '有', '无']}
             onChange={(v) => {
               onChange('hasSocialInsurance', v);
-              if (v === '有' && !input.socialInsuranceBase) {
-                onChange('socialInsuranceBase', input.monthlyBaseSalary);
+              if (v === '有') {
+                onChange('socialInsuranceBase', input.socialInsuranceBase || input.monthlyBaseSalary);
                 if (!housingFundManuallyEdited.current) {
-                  onChange('housingFundBase', input.monthlyBaseSalary);
+                  onChange('housingFundBase', input.socialInsuranceBase || input.monthlyBaseSalary);
                 }
               }
             }}
@@ -154,11 +154,11 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           <SelectField
             label="公积金"
             value={input.hasHousingFund}
-            options={['有', '无']}
+            options={['', '有', '无']}
             onChange={(v) => {
               onChange('hasHousingFund', v);
-              if (v === '有' && !input.housingFundBase) {
-                onChange('housingFundBase', input.socialInsuranceBase || input.monthlyBaseSalary);
+              if (v === '有') {
+                onChange('housingFundBase', input.housingFundBase || input.socialInsuranceBase || input.monthlyBaseSalary);
               }
             }}
           />
