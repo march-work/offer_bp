@@ -49,7 +49,7 @@ import {
   DEFAULT_SHARED_RENT_AREA,
   DOWN_PAYMENT_RATIO,
 } from './constants';
-import { getIndustryInfo } from './industry-salary';
+
 
 // ── 学历分值查找 ──
 function getBachelorScore(level: string): number {
@@ -138,18 +138,24 @@ export function calculateDailySalary(annualSalary: number, workingDays: number):
 /** 计算期望日薪 */
 export function calculateExpectedSalary(
   educationScore: number,
-  city: string,
+  cityIncome: number,
   industry: string,
   industrySalaries?: Record<string, number>,
 ): { expectedAnnual: number; expectedDaily: number; industryAvgSalary: number; industryFactor: number; cityFactor: number } {
   const baseWan = scoreToExpectedAnnualWan(educationScore);
-  const cityFactor = getCityFactor(city);
-  const { factor: realIndustryFactor, avgSalary } = getIndustryInfo(city, industry, industrySalaries);
-  // 有真实数据用真实因子，否则回退到通用行业因子
-  const industryFactor = avgSalary > 0 ? realIndustryFactor : (INDUSTRY_FACTOR[industry] ?? 1.0);
+  const cityFactor = getCityFactor(cityIncome);
+  // 优先使用 JSON 真实行业薪资数据，无数据时回退到 INDUSTRY_FACTOR 兜底表
+  let industryFactor = INDUSTRY_FACTOR[industry] ?? 1.0;
+  let industryAvgSalary = 0;
+  if (industrySalaries && industrySalaries[industry]) {
+    const salaries = Object.values(industrySalaries) as number[];
+    const cityAvg = salaries.reduce((a, b) => a + b, 0) / salaries.length;
+    industryFactor = industrySalaries[industry] / cityAvg;
+    industryAvgSalary = industrySalaries[industry];
+  }
   const expectedAnnual = baseWan * cityFactor * industryFactor * 10000;
   const expectedDaily = expectedAnnual / STANDARD_WORKING_DAYS;
-  return { expectedAnnual, expectedDaily, industryAvgSalary: avgSalary, industryFactor, cityFactor };
+  return { expectedAnnual, expectedDaily, industryAvgSalary, industryFactor, cityFactor };
 }
 
 /** 计算办公室比例 */
@@ -313,7 +319,7 @@ export function calculateFreshGradScore(
   const dailySalary = calculateDailySalary(tc, workingDays);
   const educationScore = calculateEducationScore(input);
   const { expectedAnnual, expectedDaily, industryAvgSalary, industryFactor, cityFactor } = calculateExpectedSalary(
-    educationScore, input.targetCity, input.targetIndustry, cityData.industrySalaries,
+    educationScore, cityData.income, input.targetIndustry, cityData.industrySalaries,
   );
   const { value: envFactor, factors: envFactors } = calculateEnvFactor(input, cityData, citySavingsRateAvg, tc);
   const officeRatio = calculateOfficeRatio(input);

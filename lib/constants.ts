@@ -67,66 +67,47 @@ export const CITY_OPTIONS = [
   '南京', '成都', '武汉', '西安', '合肥', '青岛', '其他',
 ] as const;
 
-// ── 11 城人均可支配收入（元/年）──
-// 数据来源：各城市统计局 2024 年
-export const CITY_INCOME_MAP: Record<string, number> = {
-  '上海': 91987,
-  '北京': 89090,
-  '深圳': 81123,
-  '广州': 83436,
-  '杭州': 80017,
-  '南京': 75180,
-  '合肥': 55832,
-  '成都': 52024,
-  '武汉': 59732,
-  '西安': 45082,
-  '青岛': 59922,
-};
+// ── 城市收入参考值（用于归一化）──
+// 11 城人均可支配收入均值，来源：各城市统计局 2024 年
+// 更新方式：年度数据刷新后重新计算此值
+/** 11 城人均可支配收入均值（聚合基准） */
+export const CITY_INCOME_AVG = 70311;
 
-/** 11 城人均可支配收入均值 */
-const allCityIncomes = Object.values(CITY_INCOME_MAP);
-export const CITY_INCOME_AVG = allCityIncomes.reduce((a, b) => a + b, 0) / allCityIncomes.length;
-
-/** 城市因子 = 城市人均收入 / 11城均值，<1 部分线性缩放到 [0.8, 1.0] */
-export function getCityFactor(city: string): number {
-  const income = CITY_INCOME_MAP[city];
-  if (!income) return 1.0;
-  const raw = income / CITY_INCOME_AVG;
+/** 城市因子 = 城市人均收入 / City Avg，<1 的部分线性缩放到 [0.8, 1.0] */
+export function getCityFactor(cityIncome: number): number {
+  if (!cityIncome) return 1.0;
+  const raw = cityIncome / CITY_INCOME_AVG;
   if (raw >= 1.0) return raw;
   if (raw <= 0.6) return 0.8;
-  // [0.6, 1.0] → [0.8, 1.0]
   return 0.8 + (raw - 0.6) * 0.5;
 }
 
 // ── 11 城储蓄率（归一化基数用，合租模式）──
 // 储蓄率 = (人均收入 - 人均支出 × 0.7 - 合租单价 × 20㎡ × 12) / 人均收入
-export const CITY_SAVINGS_RATE_MAP: Record<string, number> = {
-  '北京': 0.227,
-  '上海': 0.360,
-  '深圳': 0.200,
-  '广州': 0.364,
-  '杭州': 0.351,
-  '南京': 0.394,
-  '合肥': 0.444,
-  '成都': 0.307,
-  '武汉': 0.333,
-  '西安': 0.372,
-  '青岛': 0.409,
-};
-
-/** 11 城储蓄率均值 */
-const allCitySavingsRates = Object.values(CITY_SAVINGS_RATE_MAP);
-export const CITY_SAVINGS_RATE_AVG = allCitySavingsRates.reduce((a, b) => a + b, 0) / allCitySavingsRates.length;
+// CITY_SAVINGS_RATE_MAP 已废弃，使用聚合基准 CITY_SAVINGS_RATE_AVG
+export const CITY_SAVINGS_RATE_AVG = 0.342;
 
 // ── 行业系数（仅用于无真实数据时的兜底）──
 export const INDUSTRY_FACTOR: Record<string, number> = {
   '金融专业': 1.50,
   '信息传输、软件和信息技术服务专业': 1.50,
-  '卫生和社会工作专业': 1,
+  '卫生和社会工作专业': 1.00,
   '科学研究和技术服务专业': 1.15,
   '教育专业': 0.80,
   '文化、体育和娱乐专业': 0.95,
   '制造专业': 0.90,
+  '建筑专业': 0.85,
+  '交通运输、仓储和邮政专业': 0.85,
+  '批发和零售专业': 0.80,
+  '租赁和商务服务专业': 0.90,
+  '电力、热力、燃气及水生产和供应专业': 0.95,
+  '水利、环境和公共设施管理专业': 0.80,
+  '公共管理、社会保障和社会组织专业': 0.85,
+  '房地产专业': 0.80,
+  '住宿和餐饮专业': 0.70,
+  '居民服务、修理和其他服务专业': 0.70,
+  '采矿专业': 0.90,
+  '农、林、牧、渔专业': 0.65,
   '其他': 0.85,
 };
 
@@ -383,17 +364,7 @@ export const DEFAULT_FRESH_GRAD_INPUT: FreshGradInput = {
 
 /** 极速版覆盖字段（与 DEFAULT_FRESH_GRAD_INPUT 合并使用） */
 export const QUICK_MODE_OVERRIDES: Partial<FreshGradInput> = {
-  locationPreference: '无所谓',
-  annualStock: 0,
-  monthlyAllowance: 0,
-  hasExtraInsurance: false,
-  salaryPaymentTiming: '次月15日前',
-  wfhDaysPerWeek: 0,
-  publicHolidays: 13,
-  paidSickLeave: 0,
   commuteHours: 0,
-  growthFactor: '一般',
-  roleCoreFactor: '一般',
 };
 
 // ── 居住成本参数 ──

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import type { FreshGradResult, FreshGradInput } from '@/lib/types';
 import { useCompareStore } from '@/lib/compare-store';
+import { CalcNode, CalcLeaf } from '@/components/ui/CalcDisplay';
 
 interface Props {
   result: FreshGradResult | null;
@@ -241,59 +242,5 @@ function SalaryBar({ actual, expected, label }: { actual: number; expected: numb
   );
 }
 
-/** 可展开的计算节点（支持无限嵌套） */
-function CalcNode({
-  label,
-  value,
-  children,
-}: {
-  label: string;
-  value: string;
-  children?: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="pl-3 border-l-2 border-gray-200 ml-1">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full py-2 flex items-center justify-between text-left hover:bg-gray-100 rounded transition-colors px-2"
-      >
-        <span className="text-xs text-gray-600 flex items-center gap-1.5 font-medium">
-          <span className={`text-[10px] text-gray-400 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}>▶</span>
-          {label}
-        </span>
-        <span className="text-sm font-mono text-gray-700">{value}</span>
-      </button>
-      {children && (
-        <div className={`expand-grid ${!open ? 'expand-closed' : ''}`}>
-          <div className="expand-inner">
-            <div className="pb-2">{children}</div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** 叶子节点（不可展开，显示公式和值） */
-function CalcLeaf({
-  label,
-  formula,
-  value,
-}: {
-  label: string;
-  formula?: string;
-  value?: string;
-}) {
-  return (
-    <div className="text-[11px] text-gray-500 py-1 px-2 ml-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="shrink-0">{label}</span>
-        {value && <span className="font-mono text-gray-600 shrink-0">{value}</span>}
-      </div>
-      {formula && <div className="font-mono text-gray-400 break-all mt-0.5">{formula}</div>}
-    </div>
-  );
-}
+// CalcNode and CalcLeaf moved to shared CalcDisplay.tsx
 

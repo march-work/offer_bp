@@ -11,13 +11,12 @@ import { FreshGradResult } from '@/components/fresh-graduate/FreshGradResult';
 import { LivingCostCard } from '@/components/fresh-graduate/LivingCostCard';
 import {
   loadAllCityData,
-  computeCityAverageHousing,
-  getDistrictHousing,
-  buildIndustrySalaryMap,
+  buildCityCalcData,
   type CityDataBundle,
 } from '@/lib/city-data';
 import { CITY_OPTIONS } from '@/lib/constants';
 import { useCompareStore } from '@/lib/compare-store';
+import { generateId } from '@/lib/compare-store';
 
 export type EvalMode = 'quick' | 'detailed';
 
@@ -80,26 +79,7 @@ function FreshGradPage() {
   // 构建 CityCalculationData
   const cityCalcData = useMemo<CityCalculationData | null>(() => {
     if (!cityDataBundle) return null;
-
-    const avgHousing = computeCityAverageHousing(cityDataBundle.housing);
-    const industrySalaries = buildIndustrySalaryMap(cityDataBundle.industrySalary);
-
-    // 如果选了区县，用区县级房价
-    let housing = avgHousing;
-    if (input.targetDistrict) {
-      const districtHousing = getDistrictHousing(cityDataBundle.housing, input.targetDistrict, avgHousing);
-      if (districtHousing) housing = districtHousing;
-    }
-
-    return {
-      income: cityDataBundle.income.per_capita_disposable_income,
-      consumption: cityDataBundle.income.per_capita_consumption_expenditure,
-      secondhandPrice: housing.secondhandPrice,
-      newhomePrice: housing.newhomePrice,
-      wholeRentPrice: housing.wholeRentPrice,
-      sharedRentPrice: housing.sharedRentPrice,
-      industrySalaries,
-    };
+    return buildCityCalcData(cityDataBundle, input.targetDistrict || undefined);
   }, [cityDataBundle, input.targetDistrict]);
 
   const handleInputChange = useCallback(
@@ -155,38 +135,22 @@ function FreshGradPage() {
     return calculateTotalCompensation(input);
   }, [input]);
 
-  // ── 自动保存到对比 store ──
-  const { addItem, updateItem, items } = useCompareStore();
+  // ── 自动保存到对比 store (使用稳定的外部 ID) ──
+  const { addItem, updateItem } = useCompareStore();
   const autoSavedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!result || !calculatedInput) return;
-
     const label = `${calculatedInput.targetCity}-${calculatedInput.targetIndustry.slice(0, 4)}`;
-
-    if (autoSavedIdRef.current) {
-      updateItem(autoSavedIdRef.current, { label, input: { ...calculatedInput }, result: { ...result } });
+    const id = autoSavedIdRef.current;
+    if (id) {
+      updateItem(id, { label, input: { ...calculatedInput }, result: { ...result } });
     } else {
-      const existing = items.find((it) => it.label === label);
-      if (existing) {
-        updateItem(existing.id, { label, input: { ...calculatedInput }, result: { ...result } });
-        autoSavedIdRef.current = existing.id;
-      } else {
-        addItem(label, calculatedInput, result);
-      }
+      const newId = generateId();
+      addItem(label, calculatedInput, result, newId);
+      autoSavedIdRef.current = newId;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
-
-  // 首次 addItem 后，从 items 中拿到 ID
-  useEffect(() => {
-    if (autoSavedIdRef.current || !result || !calculatedInput) return;
-    const label = `${calculatedInput.targetCity}-${calculatedInput.targetIndustry.slice(0, 4)}`;
-    const found = items.find((it) => it.label === label);
-    if (found) {
-      autoSavedIdRef.current = found.id;
-    }
-  }, [items, result, calculatedInput]);
 
   // LivingCostCard 需要的数据
   const livingCostHousing = useMemo(() => {

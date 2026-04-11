@@ -66,6 +66,33 @@ export interface CityDataBundle {
   industrySalary: IndustrySalaryJson;
 }
 
+import type { CityCalculationData } from './types';
+
+/** 从 CityDataBundle 构建 CityCalculationData（消除页面层重复代码） */
+export function buildCityCalcData(
+  bundle: CityDataBundle,
+  targetDistrict?: string,
+): CityCalculationData {
+  const avgHousing = computeCityAverageHousing(bundle.housing);
+  const industrySalaries = buildIndustrySalaryMap(bundle.industrySalary);
+
+  let housing = avgHousing;
+  if (targetDistrict) {
+    const districtHousing = getDistrictHousing(bundle.housing, targetDistrict, avgHousing);
+    if (districtHousing) housing = districtHousing;
+  }
+
+  return {
+    income: bundle.income.per_capita_disposable_income,
+    consumption: bundle.income.per_capita_consumption_expenditure,
+    secondhandPrice: housing.secondhandPrice,
+    newhomePrice: housing.newhomePrice,
+    wholeRentPrice: housing.wholeRentPrice,
+    sharedRentPrice: housing.sharedRentPrice,
+    industrySalaries,
+  };
+}
+
 // ── 缓存 + fetch ──
 
 const cache = new Map<string, unknown>();

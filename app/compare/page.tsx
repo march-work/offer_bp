@@ -6,9 +6,7 @@ import type { FreshGradInput, FreshGradResult, CityCalculationData, SharedFields
 import { calculateFreshGradScore, calculateTotalCompensation } from '@/lib/calculate';
 import {
   loadAllCityData,
-  computeCityAverageHousing,
-  getDistrictHousing,
-  buildIndustrySalaryMap,
+  buildCityCalcData,
   type CityDataBundle,
 } from '@/lib/city-data';
 import {
@@ -57,6 +55,11 @@ function ComparePage() {
   const [slots, setSlots] = useState<OfferSlot[]>([]);
 
   // ── 从 store 恢复已有的 offer ──
+  const cityKey = useMemo(
+    () => slots.map((s) => `${s.id}:${s.input.targetCity}`).join('|'),
+    [slots],
+  );
+
   useEffect(() => {
     if (storeItems.length === 0) return;
     setSlots((prev) => {
@@ -158,26 +161,10 @@ function ComparePage() {
       loadAllCityData(city)
         .then((bundle) => {
           loadingRef.current.delete(slot.id);
-          const avgHousing = computeCityAverageHousing(bundle.housing);
-          const industrySalaries = buildIndustrySalaryMap(bundle.industrySalary);
-
           setSlots((prev) => prev.map((s) => {
             if (s.id !== slot.id) return s;
             if (s.input.targetCity !== city) return { ...s, dataLoading: false };
-            let housing = avgHousing;
-            if (s.input.targetDistrict) {
-              const districtHousing = getDistrictHousing(bundle.housing, s.input.targetDistrict, avgHousing);
-              if (districtHousing) housing = districtHousing;
-            }
-            const cityCalcData: CityCalculationData = {
-              income: bundle.income.per_capita_disposable_income,
-              consumption: bundle.income.per_capita_consumption_expenditure,
-              secondhandPrice: housing.secondhandPrice,
-              newhomePrice: housing.newhomePrice,
-              wholeRentPrice: housing.wholeRentPrice,
-              sharedRentPrice: housing.sharedRentPrice,
-              industrySalaries,
-            };
+            const cityCalcData: CityCalculationData = buildCityCalcData(bundle, s.input.targetDistrict || undefined);
             return {
               ...s,
               cityDataBundle: { ...bundle, _city: city },
@@ -195,7 +182,7 @@ function ComparePage() {
         });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slots.map((s) => `${s.id}:${s.input.targetCity}`).join('|')]);
+  }, [cityKey]);
 
   // ── 用 ref 跟踪最新 slots，以便在事件处理器中安全读取 ──
   const slotsRef = useRef(slots);

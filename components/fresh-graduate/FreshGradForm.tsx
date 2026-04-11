@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useInsuranceSync } from '@/lib/useInsuranceSync';
 import type { FreshGradInput } from '@/lib/types';
 import type { EvalMode } from '@/app/fresh-graduate/page';
 import {
@@ -35,8 +35,13 @@ interface Props {
 }
 
 export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoading, mode }: Props) {
-  const housingFundManuallyEdited = useRef(false);
   const isQuick = mode === 'quick';
+  const {
+    handleSocialInsuranceSelect,
+    handleHousingFundSelect,
+    handleSocialInsuranceBaseChange,
+    handleHousingFundBaseChange,
+  } = useInsuranceSync(input, onChange);
 
   return (
     <div className="space-y-4">
@@ -141,38 +146,20 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
             label="五险"
             value={input.hasSocialInsurance}
             options={['', '有', '无']}
-            onChange={(v) => {
-              onChange('hasSocialInsurance', v);
-              if (v === '有') {
-                onChange('socialInsuranceBase', input.socialInsuranceBase || input.monthlyBaseSalary);
-                if (!housingFundManuallyEdited.current) {
-                  onChange('housingFundBase', input.socialInsuranceBase || input.monthlyBaseSalary);
-                }
-              }
-            }}
+            onChange={handleSocialInsuranceSelect}
           />
           <SelectField
             label="公积金"
             value={input.hasHousingFund}
             options={['', '有', '无']}
-            onChange={(v) => {
-              onChange('hasHousingFund', v);
-              if (v === '有') {
-                onChange('housingFundBase', input.housingFundBase || input.socialInsuranceBase || input.monthlyBaseSalary);
-              }
-            }}
+            onChange={handleHousingFundSelect}
           />
         </div>
         {input.hasSocialInsurance === '有' && (
           <NumberField
             label="五险基数（元/月）"
             value={input.socialInsuranceBase}
-            onChange={(v) => {
-              onChange('socialInsuranceBase', v);
-              if (!housingFundManuallyEdited.current) {
-                onChange('housingFundBase', v);
-              }
-            }}
+            onChange={handleSocialInsuranceBaseChange}
             min={0}
             step={100}
             placeholder="默认等于月薪"
@@ -182,10 +169,7 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
           <NumberField
             label="公积金基数（元/月）"
             value={input.housingFundBase}
-            onChange={(v) => {
-              housingFundManuallyEdited.current = true;
-              onChange('housingFundBase', v);
-            }}
+            onChange={handleHousingFundBaseChange}
             min={0}
             step={100}
             placeholder="默认等于五险基数"

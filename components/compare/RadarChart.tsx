@@ -1,19 +1,60 @@
 'use client';
 
 import { useState } from 'react';
+import { CalcNode, CalcLeaf } from '@/components/ui/CalcDisplay';
 import type { CompareItem } from '@/lib/types';
 
 interface Props {
   items: CompareItem[];
 }
 
+// ── 雷达图维度（基于算法 Score = dailySalary × envFactor / expectedDailySalary × timeFactor）──
+// envFactor 分解为独立子因子，展示各 offer 的差异化维度
+// bounds = [worst, best]：best 端对应雷达外侧，worst 端对应雷达中心
+// 对"越低越好"的维度（工时），bounds 顺序反转即可自动倒置
 const RADAR_DIMS = [
-  { key: 'score', label: '综合评分', getValue: (r: CompareItem['result']) => r.score, format: (v: number) => v.toFixed(2), higherIsBetter: true },
-  { key: 'tc', label: '年总包', getValue: (r: CompareItem['result']) => r.totalCompensation, format: (v: number) => `${(v / 10000).toFixed(1)}万`, higherIsBetter: true },
-  { key: 'env', label: '环境系数', getValue: (r: CompareItem['result']) => r.envFactor, format: (v: number) => v.toFixed(3), higherIsBetter: true },
-  { key: 'hours', label: '工时友好', getValue: (r: CompareItem['result']) => r.effectiveHours, format: (v: number) => `${v.toFixed(1)}h`, higherIsBetter: false },
-  { key: 'city', label: '城市因子', getValue: (r: CompareItem['result']) => r.cityFactor, format: (v: number) => v.toFixed(2), higherIsBetter: true },
-  { key: 'industry', label: '行业因子', getValue: (r: CompareItem['result']) => r.industryFactor, format: (v: number) => v.toFixed(2), higherIsBetter: true },
+  {
+    key: 'dailySalary',
+    label: '日薪',
+    getValue: (r: CompareItem['result']) => r.dailySalary,
+    format: (v: number) => `¥${v.toFixed(0)}`,
+    bounds: [0, 3000] as [number, number],
+  },
+  {
+    key: 'platformFactor',
+    label: '平台系数',
+    getValue: (r: CompareItem['result']) => r.envFactors.platformFactor,
+    format: (v: number) => v.toFixed(2),
+    bounds: [0.4, 1.8] as [number, number],
+  },
+  {
+    key: 'laborFactor',
+    label: '劳动保障',
+    getValue: (r: CompareItem['result']) => r.envFactors.laborFactor,
+    format: (v: number) => v.toFixed(2),
+    bounds: [0.5, 1.8] as [number, number],
+  },
+  {
+    key: 'settlement',
+    label: '定居系数',
+    getValue: (r: CompareItem['result']) => r.envFactors.settlement,
+    format: (v: number) => v.toFixed(2),
+    bounds: [0.7, 1.3] as [number, number],
+  },
+  {
+    key: 'citySavings',
+    label: '城市储蓄',
+    getValue: (r: CompareItem['result']) => r.envFactors.citySavings,
+    format: (v: number) => v.toFixed(3),
+    bounds: [0.5, 1.3] as [number, number],
+  },
+  {
+    key: 'timeFriendly',
+    label: '工时友好',
+    getValue: (r: CompareItem['result']) => r.effectiveHours,
+    format: (v: number) => `${v.toFixed(1)}h`,
+    bounds: [14, 4] as [number, number], // 工时越低越好 → bounds 反转
+  },
 ];
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
@@ -23,6 +64,16 @@ interface HoveredTip {
   itemIdx: number;
   x: number;
   y: number;
+}
+
+/** 绝对归一化：基于预定义 bounds，同值永远同位置 */
+function normalize(value: number, bounds: [number, number]): number {
+  const worst = bounds[0];
+  const best = bounds[1];
+  if (best === worst) return 0.575;
+  const norm = (value - worst) / (best - worst);
+  const clamped = Math.max(0, Math.min(1, norm));
+  return 0.15 + clamped * 0.85;
 }
 
 export function RadarChart({ items }: Props) {
@@ -43,23 +94,13 @@ export function RadarChart({ items }: Props) {
     y: cy + r * Math.sin(angle),
   });
 
-  // Normalize each dimension to [0.15, 1] across items
-  const normalized: number[][] = []; // [dimIdx][itemIdx]
-  const rawValues: (number | null)[][] = []; // [dimIdx][itemIdx]
+  // 绝对归一化：每个维度使用固定的 bounds，不受其他 offer 影响
+  const normalized: number[][] = [];
+  const rawValues: (number | null)[][] = [];
   RADAR_DIMS.forEach((dim) => {
     const vals = items.map((it) => dim.getValue(it.result));
     rawValues.push(vals);
-    const max = Math.max(...vals);
-    const min = Math.min(...vals);
-    const range = max - min;
-    normalized.push(
-      vals.map((v) => {
-        if (range === 0) return 0.5; // all equal → middle
-        let norm = (v - min) / range;
-        if (!dim.higherIsBetter) norm = 1 - norm;
-        return 0.15 + norm * 0.85;
-      }),
-    );
+    normalized.push(vals.map((v) => normalize(v, dim.bounds)));
   });
 
   const gridPath = (ratio: number) =>
@@ -94,7 +135,7 @@ export function RadarChart({ items }: Props) {
             return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#E5E7EB" strokeWidth={1} />;
           })}
 
-          {/* Polygon 填充层（不拦截鼠标） */}
+          {/* Polygon 填充层 */}
           {items.map((item, itemIdx) => {
             const color = COLORS[itemIdx % COLORS.length];
             return (
@@ -102,7 +143,7 @@ export function RadarChart({ items }: Props) {
             );
           })}
 
-          {/* Circle 层（最上层，接收悬停） */}
+          {/* Circle 层（接收悬停） */}
           {items.map((item, itemIdx) => {
             const color = COLORS[itemIdx % COLORS.length];
             return Array.from({ length: n }, (_, dimIdx) => {
@@ -133,7 +174,6 @@ export function RadarChart({ items }: Props) {
             const text = `${item.label}: ${rawVal !== null ? dim.format(rawVal) : '-'}`;
             const tw = text.length * 8 + 16;
             const th = 28;
-            // Position: prefer above-right, adjust if near edge
             let tx = x + 8;
             let ty = y - th - 4;
             if (tx + tw > size - 4) tx = x - tw - 8;
@@ -148,7 +188,7 @@ export function RadarChart({ items }: Props) {
             );
           })()}
 
-          {/* Labels — pointer-events-none 防止挡住数据点的悬停 */}
+          {/* Labels */}
           {RADAR_DIMS.map((dim, i) => {
             const p = polar(getAngle(i), R + 30);
             const isLeft = p.x < cx - 5;
@@ -200,51 +240,9 @@ export function RadarChart({ items }: Props) {
   );
 }
 
-/** 可展开的计算节点 */
-function CalcNode({
-  label,
-  value,
-  children,
-  borderColor = 'border-gray-200',
-}: {
-  label: string;
-  value: string;
-  children?: React.ReactNode;
-  borderColor?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className={`pl-2 border-l-2 ${borderColor} ml-1`}>
-      <button
-        type="button"
-        onClick={() => children && setOpen(!open)}
-        className={`w-full py-1.5 flex items-center justify-between text-left rounded transition-colors px-2 ${children ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
-      >
-        <span className="text-xs text-gray-600 flex items-center gap-1.5 font-medium">
-          {children && (
-            <span className={`text-[10px] text-gray-400 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}>▶</span>
-          )}
-          {label}
-        </span>
-        <span className="text-sm font-mono text-gray-700">{value}</span>
-      </button>
-      {children && open && <div className="pb-1">{children}</div>}
-    </div>
-  );
-}
+// CalcNode moved to shared CalcDisplay.tsx
 
-/** 叶子节点 */
-function CalcLeaf({ label, value, formula }: { label: string; value?: string; formula?: string }) {
-  return (
-    <div className="text-[11px] text-gray-500 py-0.5 px-2 ml-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="shrink-0">{label}</span>
-        {value && <span className="font-mono text-gray-600 shrink-0">{value}</span>}
-      </div>
-      {formula && <div className="font-mono text-gray-400 break-all mt-0.5">{formula}</div>}
-    </div>
-  );
-}
+// CalcLeaf moved to shared CalcDisplay.tsx
 
 /** 单个 offer 的计算过程卡片 */
 function CalcDetail({ item, color }: { item: CompareItem; color: string }) {

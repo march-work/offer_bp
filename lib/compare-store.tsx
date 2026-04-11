@@ -16,7 +16,7 @@ interface CompareState {
 }
 
 interface CompareActions {
-  addItem: (label: string, input: FreshGradInput, result: FreshGradResult) => void;
+  addItem: (label: string, input: FreshGradInput, result: FreshGradResult, id?: string) => void;
   removeItem: (id: string) => void;
   updateItem: (id: string, updates: Partial<Pick<CompareItem, 'label' | 'input' | 'result'>>) => void;
   setSharedFields: (fields: SharedFields) => void;
@@ -88,11 +88,11 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
-  const addItem = useCallback((label: string, input: FreshGradInput, result: FreshGradResult) => {
+  const addItem = useCallback((label: string, input: FreshGradInput, result: FreshGradResult, id?: string) => {
     setState((prev) => {
       if (prev.items.length >= MAX_COMPARE_ITEMS) return prev;
       const newItem: CompareItem = {
-        id: generateId(),
+        id: id ?? generateId(),
         label,
         input: { ...input },
         result: { ...result },

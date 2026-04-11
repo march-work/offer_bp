@@ -7,11 +7,13 @@ export const metadata: Metadata = {
   description: '应届生 Offer 评测器 & 跳槽决策评测器，帮你量化分析 offer 的真实价值',
 };
 
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-};
+export function generateViewport() {
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  };
+}
 
 export default function RootLayout({
   children,
