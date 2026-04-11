@@ -86,17 +86,26 @@ function ComparePage() {
       phdLevel: sharedFields.phdLevel,
       targetIndustry: sharedFields.targetIndustry,
     };
-    setSlots((prev) => [...prev, {
-      id,
-      label: `Offer ${String.fromCharCode(65 + prev.length)}`, // A, B, C...
-      input,
-      result: null,
-      cityDataBundle: null,
-      cityCalcData: null,
-      districts: [],
-      dataLoading: false,
-      mode: 'quick',
-    }]);
+    setSlots((prev) => {
+      // 使用已有 slot 中最大的字母序号 +1，避免重复
+      const existingLetters = prev.map((s) => {
+        const m = s.label.match(/^Offer ([A-Z])$/);
+        return m ? m[1].charCodeAt(0) - 65 : -1;
+      });
+      const nextIdx = Math.max(prev.length - 1, ...existingLetters) + 1;
+      const label = `Offer ${String.fromCharCode(65 + nextIdx)}`;
+      return [...prev, {
+        id,
+        label,
+        input,
+        result: null,
+        cityDataBundle: null,
+        cityCalcData: null,
+        districts: [],
+        dataLoading: false,
+        mode: 'quick',
+      }];
+    });
   }, [slots.length, sharedFields]);
 
   // per-slot mode update handler
@@ -188,18 +197,20 @@ function ComparePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slots.map((s) => `${s.id}:${s.input.targetCity}`).join('|')]);
 
+  // ── 用 ref 跟踪最新 slots，以便在事件处理器中安全读取 ──
+  const slotsRef = useRef(slots);
+  slotsRef.current = slots;
+
   // ── 计算 offer ──
   const handleCalculate = useCallback((id: string) => {
-    setSlots((prev) => prev.map((s) => {
-      if (s.id !== id) return s;
-      if (!s.cityCalcData) return s;
-      const tc = calculateTotalCompensation(s.input);
-      if (tc <= 0) return s;
-      const result = calculateFreshGradScore(s.input, s.cityCalcData);
-      // 同步到 store 以便其他页面可见
-      addItem(s.label, s.input, result);
-      return { ...s, result };
-    }));
+    const slot = slotsRef.current.find((s) => s.id === id);
+    if (!slot?.cityCalcData) return;
+    const tc = calculateTotalCompensation(slot.input);
+    if (tc <= 0) return;
+    const result = calculateFreshGradScore(slot.input, slot.cityCalcData);
+    // 两个 setState 分别调用（事件处理器中安全）
+    setSlots((prev) => prev.map((s) => s.id === id ? { ...s, result } : s));
+    addItem(slot.label, slot.input, result);
   }, [addItem]);
 
   // ── 共享字段变更时，同步到所有 slot ──
@@ -409,8 +420,8 @@ function ComparePage() {
         {/* 对比表格 */}
         {comparableItems.length >= 2 && (
           <>
-            <CompareTable items={comparableItems} />
             <RadarChart items={comparableItems} />
+            <CompareTable items={comparableItems} />
           </>
         )}
         {comparableItems.length === 1 && (

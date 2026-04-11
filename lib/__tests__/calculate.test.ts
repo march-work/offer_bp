@@ -48,7 +48,7 @@ function createTestInput(overrides: Partial<FreshGradInput> = {}): FreshGradInpu
     locationPreference: '无所谓',
     growthFactor: '一般',
     roleCoreFactor: '一般',
-    companySizeFactor: '中型公司',
+    companySizeFactor: '中型公司（200-2000人）',
     overtimeCultureFactor: '偶尔加班',
     ...overrides,
   };
@@ -178,8 +178,8 @@ describe('calculateEffectiveHours', () => {
       commuteHours: 2,
       restHours: 1,
     });
-    // (9 + 2 * 1.0 - 0.5 * 1) * 0.6 = 10.5 * 0.6 = 6.3
-    expect(calculateEffectiveHours(input, 0.6, 1.0)).toBeCloseTo(6.3);
+    // 9 - 0.5*1 + 2 * 1.0 * 0.6 = 9 - 0.5 + 1.2 = 9.7
+    expect(calculateEffectiveHours(input, 0.6, 1.0)).toBeCloseTo(9.7);
   });
 });
 
@@ -281,7 +281,7 @@ describe('calculateFreshGradScore', () => {
     const base = calculateFreshGradScore(createTestInput({
       growthFactor: '一般',
       roleCoreFactor: '一般',
-      companySizeFactor: '中型公司',
+      companySizeFactor: '中型公司（200-2000人）',
       overtimeCultureFactor: '偶尔加班',
     }), cityData);
     const good = calculateFreshGradScore(createTestInput({

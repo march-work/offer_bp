@@ -51,26 +51,6 @@ export interface IndustrySalaryJson {
   industries: { name: string; annual_average_salary: number; currency: string }[];
 }
 
-export interface CommuteJson {
-  city: string;
-  year: number;
-  one_way_average_commute_time: number;
-  time_unit: string;
-  commute_ratios: {
-    extreme_commute: number;
-    happy_commute: number;
-  };
-  source: string;
-}
-
-export interface NationalJson {
-  year: number;
-  income: number;
-  expenditure: number;
-  source: string;
-  savings_ratio: number;
-}
-
 // ── 聚合数据类型 ──
 
 export interface HousingPrices {
@@ -114,14 +94,6 @@ export function loadIndustrySalary(city: string): Promise<IndustrySalaryJson> {
   return fetchJSON<IndustrySalaryJson>(`/cities/${city}/industry_salary.json`);
 }
 
-export function loadCommute(city: string): Promise<CommuteJson> {
-  return fetchJSON<CommuteJson>(`/cities/${city}/commute.json`);
-}
-
-export function loadNational(): Promise<NationalJson> {
-  return fetchJSON<NationalJson>('/cities/national.json');
-}
-
 // ── 聚合加载 ──
 
 export async function loadAllCityData(city: string): Promise<CityDataBundle> {
@@ -159,11 +131,6 @@ export function computeCityAverageHousing(housing: HousingJson): HousingPrices {
     wholeRentPrice: +avg(d => normalizePrice(d.whole_rent, true)).toFixed(2),
     sharedRentPrice: +avg(d => normalizePrice(d.shared_rent, true)).toFixed(2),
   };
-}
-
-/** 获取区县列表 */
-export function getDistrictNames(housing: HousingJson): string[] {
-  return Object.keys(housing.districts);
 }
 
 /** 获取某区县的房价数据，null 表示该区县无数据 */

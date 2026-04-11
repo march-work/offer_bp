@@ -121,16 +121,12 @@ function normalCDF(z: number): number {
   return 0.5 * (1 + sign * y);
 }
 
-// ── 外部数据参数类型（使用类型组合）──
-export type ExternalLivingData = CityHousingData;
-export type ExternalIncomeData = CityIncomeData;
-
 // ── 主计算函数 ──
 export function calculateLivingCost(
   cityName: string,
   annualSalary: number,
-  housingData?: ExternalLivingData | null,
-  incomeData?: ExternalIncomeData | null,
+  housingData?: CityHousingData | null,
+  incomeData?: CityIncomeData | null,
 ): LivingCostResult | null {
   // 必须提供数据（从 JSON 文件加载）
   const cityData = incomeData

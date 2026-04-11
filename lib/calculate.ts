@@ -163,17 +163,20 @@ export function getShuttleFactor(hasShuttle: boolean): number {
   return hasShuttle ? SHUTTLE_FACTOR_HAS : SHUTTLE_FACTOR_NO;
 }
 
-/** 计算有效工时 */
+/** 计算有效工时
+ *  公式: workHours − 0.5×rest + commute×shuttle×officeRatio
+ *  工作和休息在所有天数（含 WFH）都计算，通勤仅按办公室天数折算
+ */
 export function calculateEffectiveHours(
   input: FreshGradInput,
   officeRatio: number,
   shuttleFactor: number,
 ): number {
-  return (
+  return Math.max(0,
     input.dailyWorkHours
-    + input.commuteHours * shuttleFactor
     - REST_TIME_DISCOUNT * input.restHours
-  ) * officeRatio;
+    + input.commuteHours * shuttleFactor * officeRatio,
+  );
 }
 
 /** 计算定居期望因子
@@ -238,10 +241,14 @@ export function calculateEnvFactor(
   const salary = input.monthlyBaseSalary || 1;
   const socialInsuranceFactor = input.hasSocialInsurance === '有'
     ? calcBaseFactor((input.socialInsuranceBase || salary) / salary)
-    : NO_SOCIAL_INSURANCE_FACTOR;
+    : input.hasSocialInsurance === '无'
+      ? NO_SOCIAL_INSURANCE_FACTOR
+      : 1.0;
   const housingFundFactor = input.hasHousingFund === '有'
     ? calcBaseFactor((input.housingFundBase || salary) / salary)
-    : NO_HOUSING_FUND_FACTOR;
+    : input.hasHousingFund === '无'
+      ? NO_HOUSING_FUND_FACTOR
+      : 1.0;
   const extraInsuranceFactor = input.hasExtraInsurance ? EXTRA_INSURANCE_FACTOR : 1.0;
   const salaryPaymentFactor = SALARY_PAYMENT_FACTOR[input.salaryPaymentTiming] ?? 1.0;
   const laborFactor = socialInsuranceFactor * housingFundFactor * extraInsuranceFactor * salaryPaymentFactor;

@@ -288,13 +288,7 @@ export const WORK_ENV_OPTIONS = ['高端园区', 'CBD/甲级写字楼', '普通'
 export const CAFETERIA_OPTIONS = ['丰富且便宜', '不错', '普通', '较差'] as const;
 export const LOCATION_PREF_OPTIONS = ['喜欢/离家近', '无所谓', '不太满意/有点远'] as const;
 
-export const MONTHS_PER_YEAR_OPTIONS = [12, 13, 14, 15, 16, 18, 20, 24] as const;
-export const ALLOWANCE_OPTIONS = [0, 500, 800, 1000, 1500, 2000, 2500, 3000, 4000, 5000] as const;
-
-export const WORK_DAYS_OPTIONS = [4, 5, 6, 7] as const;
 export const WFH_DAYS_OPTIONS = [0, 1, 2, 3, 4, 5] as const;
-export const DAILY_HOURS_OPTIONS = [6, 7, 8, 9, 10, 11, 12, 13, 14] as const;
-export const REST_HOURS_OPTIONS = [0.5, 1, 1.5, 2, 2.5] as const;
 
 // ══════════════════════════════════════════════════════════════
 // ── 以下原散落在 calculate.ts / living-cost.ts 的公式参数 ──

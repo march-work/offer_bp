@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import type { FreshGradInput, FreshGradResult } from '@/lib/types';
 import { calculateTotalCompensation } from '@/lib/calculate';
 import {
@@ -41,6 +41,7 @@ export function CompareCard({
 }: Props) {
   const isQuick = mode === 'quick';
   const tc = useMemo(() => calculateTotalCompensation(input), [input]);
+  const housingFundManuallyEdited = useRef(false);
 
   const canCalculate = tc > 0 && !!input.hasSocialInsurance && !!input.hasHousingFund;
   const calcDisabledReason = tc <= 0
@@ -66,12 +67,11 @@ export function CompareCard({
         <button
           type="button"
           onClick={() => onModeChange(mode === 'quick' ? 'detailed' : 'quick')}
-          className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
-            mode === 'quick' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'
+          className={`text-xs px-2.5 py-1 rounded-lg font-medium shrink-0 transition-colors ${
+            mode === 'quick' ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
           }`}
-          title="切换极速版/详细版"
         >
-          {mode === 'quick' ? '极速' : '详细'}
+          {mode === 'quick' ? '极速（点击切换）' : '详细（点击切换）'}
         </button>
         <button
           type="button"
@@ -160,7 +160,9 @@ export function CompareCard({
                 onInputChange('hasSocialInsurance', v);
                 if (v === '有') {
                   onInputChange('socialInsuranceBase', input.socialInsuranceBase || input.monthlyBaseSalary);
-                  onInputChange('housingFundBase', input.housingFundBase || input.socialInsuranceBase || input.monthlyBaseSalary);
+                  if (!housingFundManuallyEdited.current) {
+                    onInputChange('housingFundBase', input.housingFundBase || input.socialInsuranceBase || input.monthlyBaseSalary);
+                  }
                 }
               }}
             />
@@ -182,7 +184,9 @@ export function CompareCard({
               value={input.socialInsuranceBase}
               onChange={(v) => {
                 onInputChange('socialInsuranceBase', v);
-                onInputChange('housingFundBase', v);
+                if (!housingFundManuallyEdited.current) {
+                  onInputChange('housingFundBase', v);
+                }
               }}
               min={0}
               step={100}

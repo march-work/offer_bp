@@ -181,9 +181,8 @@ export function FreshGradResult({ result, input }: Props) {
             >
               <CalcNode label="有效工时" value={`${result.effectiveHours.toFixed(2)} h`}>
                 <CalcLeaf label="日均工时" value={`${input?.dailyWorkHours ?? 8} h`} />
-                <CalcLeaf label="通勤" formula={`${(input?.commuteHours ?? 0) * 60}min × ${result.shuttleFactor}`} />
                 <CalcLeaf label="− 0.5 × 休息时间" formula={`0.5 × ${input?.restHours ?? 0}`} />
-                <CalcLeaf label="× 办公室比例" value={`${(result.officeRatio * 100).toFixed(0)}%`} />
+                <CalcLeaf label="+ 通勤（仅办公室日）" formula={`${(input?.commuteHours ?? 0) * 60}min × ${result.shuttleFactor} × ${(result.officeRatio * 100).toFixed(0)}%`} />
               </CalcNode>
               <CalcNode label="办公室比例" value={`${(result.officeRatio * 100).toFixed(0)}%`}>
                 <CalcLeaf label="每周工作" value={`${input?.workDaysPerWeek ?? 5} 天`} />
