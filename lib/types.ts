@@ -1,6 +1,18 @@
 // ── 应届生评测器类型定义 ──
 
 export type Industry =
+  // 白皮书热招行业（用户可见名）
+  | '互联网'
+  | '计算机'
+  | '电子/半导体/集成电路'
+  | '机械设备制造'
+  | '汽车'
+  | '金融'
+  | '生物/医药'
+  | '贸易/进出口'
+  | '能源/化工'
+  | '快速消费品'
+  // 统计局行业（保留）
   | '金融专业'
   | '信息传输、软件和信息技术服务专业'
   | '卫生和社会工作专业'
@@ -31,6 +43,7 @@ export interface FreshGradInput {
   // 地点
   targetCity: string;
   targetIndustry: Industry;
+  targetPosition?: string; // 白皮书热招职位名称（选填）
 
   // 薪资
   monthlyBaseSalary: number;
@@ -114,6 +127,7 @@ export interface FreshGradResult {
   industryAvgSalary: number;
   industryFactor: number;
   cityFactor: number;
+  positionRefSalary?: number; // 白皮书热招职位参考年薪
 }
 
 /** 城市计算数据（从 JSON 加载） */
@@ -157,4 +171,5 @@ export interface SharedFields {
   masterLevel: string;
   phdLevel: string;
   targetIndustry: Industry;
+  targetPosition?: string;
 }

@@ -1,6 +1,6 @@
 // ── 应届生评测器常量表 ──
 
-import type { RatingInfo, FreshGradInput } from './types';
+import type { RatingInfo, FreshGradInput, Industry } from './types';
 
 // ── 标准年工作日基准 ──
 export const STANDARD_WORKING_DAYS = 260;
@@ -68,10 +68,10 @@ export const CITY_OPTIONS = [
 ] as const;
 
 // ── 城市收入参考值（用于归一化）──
-// 11 城人均可支配收入均值，来源：各城市统计局 2024 年
+// 11 城城镇居民人均可支配收入均值，来源：《2025前程无忧人力资源白皮书》
 // 更新方式：年度数据刷新后重新计算此值
-/** 11 城人均可支配收入均值（聚合基准） */
-export const CITY_INCOME_AVG = 70311;
+/** 11 城城镇居民人均可支配收入均值（聚合基准） */
+export const CITY_INCOME_AVG = 76549;
 
 /** 城市因子 = 城市人均收入 / City Avg，<1 的部分线性缩放到 [0.8, 1.0] */
 export function getCityFactor(cityIncome: number): number {
@@ -241,7 +241,71 @@ export const PRESSURE_RATING_CONFIG = {
 };
 
 // ── 表单选项 ──
+
+// 白皮书热招行业 → 内部统计局行业映射
+export const HOT_JOB_INDUSTRIES: {
+  displayName: string;
+  mappedIndustry: Industry;
+}[] = [
+  { displayName: '互联网', mappedIndustry: '信息传输、软件和信息技术服务专业' },
+  { displayName: '计算机', mappedIndustry: '信息传输、软件和信息技术服务专业' },
+  { displayName: '电子/半导体/集成电路', mappedIndustry: '制造专业' },
+  { displayName: '机械设备制造', mappedIndustry: '制造专业' },
+  { displayName: '汽车', mappedIndustry: '制造专业' },
+  { displayName: '金融', mappedIndustry: '金融专业' },
+  { displayName: '生物/医药', mappedIndustry: '卫生和社会工作专业' },
+  { displayName: '贸易/进出口', mappedIndustry: '批发和零售专业' },
+  { displayName: '能源/化工', mappedIndustry: '电力、热力、燃气及水生产和供应专业' },
+  { displayName: '快速消费品', mappedIndustry: '居民服务、修理和其他服务专业' },
+];
+
+/** 白皮书行业名 → 内部行业名 的快速查找表 */
+export const HOT_JOB_MAP: Record<string, Industry> = {};
+for (const h of HOT_JOB_INDUSTRIES) {
+  HOT_JOB_MAP[h.displayName] = h.mappedIndustry;
+}
+
+/** 判断是否为白皮书行业 */
+export function isHotJobIndustry(name: string): boolean {
+  return name in HOT_JOB_MAP;
+}
+
+/** 将任意行业名（白皮书或统计局）解析为统计局内部名，用于 salary 查表 */
+export function resolveInternalIndustry(name: string): string {
+  return HOT_JOB_MAP[name] ?? name;
+}
+
+// 有白皮书数据的行业名集合（用于从原19项中排除已被白皮书替代的）
+const _hotJobInternalSet = new Set<string>(HOT_JOB_INDUSTRIES.map(h => h.mappedIndustry));
+
+// 保留的原有行业（未被白皮书覆盖）
+const _legacyIndustries = [
+  '科学研究和技术服务专业',
+  '教育专业',
+  '文化、体育和娱乐专业',
+  '建筑专业',
+  '交通运输、仓储和邮政专业',
+  '租赁和商务服务专业',
+  '水利、环境和公共设施管理专业',
+  '公共管理、社会保障和社会组织专业',
+  '房地产专业',
+  '住宿和餐饮专业',
+  '采矿专业',
+  '农、林、牧、渔专业',
+  '其他',
+] as const;
+
+/** 合并后的完整行业列表：白皮书10个 + 保留原有行业 */
 export const INDUSTRY_OPTIONS = [
+  ...HOT_JOB_INDUSTRIES.map(h => h.displayName),
+  ..._legacyIndustries,
+] as const;
+
+/** 一线城市列表（用于白皮书薪资切换） */
+export const TIER1_CITIES = ['北京', '上海', '广州', '深圳'] as const;
+
+/** 原统计局行业完整列表（内部计算用） */
+export const STATISTICAL_INDUSTRY_OPTIONS = [
   '金融专业',
   '信息传输、软件和信息技术服务专业',
   '卫生和社会工作专业',
@@ -330,7 +394,8 @@ export const DEFAULT_FRESH_GRAD_INPUT: FreshGradInput = {
   masterLevel: '无',
   phdLevel: '无',
   targetCity: '上海',
-  targetIndustry: '信息传输、软件和信息技术服务专业',
+  targetIndustry: '互联网',
+  targetPosition: '',
   monthlyBaseSalary: 0,
   monthsPerYear: 12,
   yearEndBonus: 0,

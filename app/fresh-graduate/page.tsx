@@ -40,6 +40,7 @@ function FreshGradPage() {
   });
   const [calculatedInput, setCalculatedInput] = useState<FreshGradInput | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [positionRefSalary, setPositionRefSalary] = useState(0);
 
   // ── 城市数据加载 ──
   const [cityDataBundle, setCityDataBundle] = useState<CityDataBundle | null>(null);
@@ -128,8 +129,8 @@ function FreshGradPage() {
     if (!calculatedInput || !cityCalcData) return null;
     const tc = calculateTotalCompensation(calculatedInput);
     if (tc <= 0) return null;
-    return calculateFreshGradScore(calculatedInput, cityCalcData);
-  }, [calculatedInput, cityCalcData]);
+    return calculateFreshGradScore(calculatedInput, cityCalcData, undefined, positionRefSalary || undefined);
+  }, [calculatedInput, cityCalcData, positionRefSalary]);
 
   const tc = useMemo(() => {
     return calculateTotalCompensation(input);
@@ -204,6 +205,7 @@ function FreshGradPage() {
               districts={districts}
               dataLoading={dataLoading}
               mode={mode}
+              onPositionSalaryChange={setPositionRefSalary}
             />
           </div>
           {/* 右栏: 结果 */}

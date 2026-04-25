@@ -32,7 +32,8 @@ export const DEFAULT_SHARED_FIELDS: SharedFields = {
   bachelorLevel: '双非',
   masterLevel: '无',
   phdLevel: '无',
-  targetIndustry: '信息传输、软件和信息技术服务专业',
+  targetIndustry: '互联网',
+  targetPosition: '',
 };
 
 // ── 工具函数 ──

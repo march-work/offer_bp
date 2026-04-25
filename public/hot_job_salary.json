@@ -1,0 +1,117 @@
+{
+  "source": "《2025前程无忧人力资源白皮书》",
+  "year": 2025,
+  "tier1_cities": ["北京", "上海", "广州", "深圳"],
+  "industries": [
+    {
+      "name": "互联网",
+      "mapped_industry": "信息传输、软件和信息技术服务专业",
+      "positions": [
+        { "name": "产品经理（IT）", "tier1": 386153, "non_tier1": 305632 },
+        { "name": "算法工程师", "tier1": 372629, "non_tier1": 269048 },
+        { "name": "Android开发工程师", "tier1": 294853, "non_tier1": 236415 },
+        { "name": "网络安全工程师", "tier1": 270892, "non_tier1": 164531 },
+        { "name": "搜索引擎优化工程师", "tier1": 240658, "non_tier1": 161026 }
+      ]
+    },
+    {
+      "name": "计算机",
+      "mapped_industry": "信息传输、软件和信息技术服务专业",
+      "positions": [
+        { "name": "云计算架构师", "tier1": 491253, "non_tier1": 423052 },
+        { "name": "大数据工程师", "tier1": 315965, "non_tier1": 273258 },
+        { "name": "全栈开发工程师", "tier1": 295236, "non_tier1": 231523 },
+        { "name": "软件测试工程师", "tier1": 228694, "non_tier1": 176931 },
+        { "name": "技术服务工程师", "tier1": 186193, "non_tier1": 149364 }
+      ]
+    },
+    {
+      "name": "电子/半导体/集成电路",
+      "mapped_industry": "制造专业",
+      "positions": [
+        { "name": "集成电路设计工程师", "tier1": 400591, "non_tier1": 350132 },
+        { "name": "FPGA工程师", "tier1": 390516, "non_tier1": 321658 },
+        { "name": "嵌入式软件开发工程师", "tier1": 304258, "non_tier1": 220823 },
+        { "name": "硬件工程师", "tier1": 249021, "non_tier1": 183493 },
+        { "name": "结构工程师", "tier1": 229863, "non_tier1": 169136 }
+      ]
+    },
+    {
+      "name": "机械设备制造",
+      "mapped_industry": "制造专业",
+      "positions": [
+        { "name": "自动化工程师", "tier1": 235291, "non_tier1": 156532 },
+        { "name": "机械工程师", "tier1": 218426, "non_tier1": 150216 },
+        { "name": "现场应用工程师", "tier1": 176536, "non_tier1": 135147 },
+        { "name": "焊接工程师", "tier1": 169462, "non_tier1": 124268 },
+        { "name": "数控操机", "tier1": 109628, "non_tier1": 90153 }
+      ]
+    },
+    {
+      "name": "汽车",
+      "mapped_industry": "制造专业",
+      "positions": [
+        { "name": "算法工程师", "tier1": 384258, "non_tier1": 296203 },
+        { "name": "汽车设计工程师", "tier1": 278683, "non_tier1": 167320 },
+        { "name": "汽车装配工艺工程师", "tier1": 210874, "non_tier1": 136659 },
+        { "name": "供应商质量工程师", "tier1": 180942, "non_tier1": 111453 },
+        { "name": "汽车质量工程师", "tier1": 158622, "non_tier1": 130146 }
+      ]
+    },
+    {
+      "name": "金融",
+      "mapped_industry": "金融专业",
+      "positions": [
+        { "name": "投资经理", "tier1": 397297, "non_tier1": 309704 },
+        { "name": "基金分析师", "tier1": 340502, "non_tier1": 264885 },
+        { "name": "风险控制专员", "tier1": 241304, "non_tier1": 174568 },
+        { "name": "理财顾问", "tier1": 216453, "non_tier1": 148759 },
+        { "name": "融资专员", "tier1": 189540, "non_tier1": 123958 }
+      ]
+    },
+    {
+      "name": "生物/医药",
+      "mapped_industry": "卫生和社会工作专业",
+      "positions": [
+        { "name": "生物信息工程师", "tier1": 293820, "non_tier1": 188605 },
+        { "name": "药物合成研究员", "tier1": 279563, "non_tier1": 183916 },
+        { "name": "蛋白纯化研究员", "tier1": 222310, "non_tier1": 146638 },
+        { "name": "药品注册员", "tier1": 207837, "non_tier1": 132083 },
+        { "name": "药品市场推广", "tier1": 171654, "non_tier1": 126283 }
+      ]
+    },
+    {
+      "name": "贸易/进出口",
+      "mapped_industry": "批发和零售专业",
+      "positions": [
+        { "name": "高级业务跟单", "tier1": 211275, "non_tier1": 158548 },
+        { "name": "外贸专员", "tier1": 167943, "non_tier1": 119460 },
+        { "name": "业务跟单", "tier1": 138160, "non_tier1": 92206 },
+        { "name": "物流专员", "tier1": 126043, "non_tier1": 82257 },
+        { "name": "单证员", "tier1": 106834, "non_tier1": 71326 }
+      ]
+    },
+    {
+      "name": "能源/化工",
+      "mapped_industry": "电力、热力、燃气及水生产和供应专业",
+      "positions": [
+        { "name": "材料工程师", "tier1": 206480, "non_tier1": 146952 },
+        { "name": "环保工程师", "tier1": 194634, "non_tier1": 141256 },
+        { "name": "精益生产工程师", "tier1": 187384, "non_tier1": 134115 },
+        { "name": "EHS工程师", "tier1": 164895, "non_tier1": 125642 },
+        { "name": "生产工程师", "tier1": 156323, "non_tier1": 119781 }
+      ]
+    },
+    {
+      "name": "快速消费品",
+      "mapped_industry": "居民服务、修理和其他服务专业",
+      "positions": [
+        { "name": "品牌经理", "tier1": 373094, "non_tier1": 268378 },
+        { "name": "电商运营专员", "tier1": 146530, "non_tier1": 116687 },
+        { "name": "直播运营专员", "tier1": 142865, "non_tier1": 107851 },
+        { "name": "市场通路专员", "tier1": 136402, "non_tier1": 96312 },
+        { "name": "新媒体运营专员", "tier1": 130140, "non_tier1": 94826 }
+      ]
+    }
+  ]
+}

@@ -69,31 +69,56 @@ export function FreshGradResult({ result, input }: Props) {
       {/* 薪资对比 */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h4 className="text-sm font-semibold text-gray-700 mb-3">薪资对比</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className={result.positionRefSalary ? 'grid grid-cols-3 gap-4' : 'grid grid-cols-2 gap-4'}>
           <MetricBox
             label="你的总年包（新人）"
             value={`${(result.totalCompensation / 10000).toFixed(1)}万`}
             sub={`日薪 ¥${(result.totalCompensation / result.workingDays).toFixed(0)}`}
           />
-          {result.industryAvgSalary > 0 ? (
-            <MetricBox
-              label="行业平均年薪"
-              value={`${(result.industryAvgSalary / 10000).toFixed(1)}万`}
-              sub={`日薪 ¥${(result.industryAvgSalary / 260).toFixed(0)}`}
-            />
+          {result.positionRefSalary ? (
+            <>
+              <MetricBox
+                label={`${input?.targetPosition ?? '职位'}参考`}
+                value={`${(result.positionRefSalary / 10000).toFixed(1)}万`}
+                sub={`日薪 ¥${(result.positionRefSalary / 260).toFixed(0)}`}
+              />
+              {result.industryAvgSalary > 0 && (
+                <MetricBox
+                  label="行业平均年薪"
+                  value={`${(result.industryAvgSalary / 10000).toFixed(1)}万`}
+                  sub={`日薪 ¥${(result.industryAvgSalary / 260).toFixed(0)}`}
+                />
+              )}
+            </>
           ) : (
-            <MetricBox
-              label="期望 TC"
-              value={`${(result.expectedAnnualSalary / 10000).toFixed(1)}万`}
-              sub={`日薪 ¥${(result.expectedAnnualSalary / 260).toFixed(0)}`}
-            />
+            result.industryAvgSalary > 0 ? (
+              <MetricBox
+                label="行业平均年薪"
+                value={`${(result.industryAvgSalary / 10000).toFixed(1)}万`}
+                sub={`日薪 ¥${(result.industryAvgSalary / 260).toFixed(0)}`}
+              />
+            ) : (
+              <MetricBox
+                label="期望 TC"
+                value={`${(result.expectedAnnualSalary / 10000).toFixed(1)}万`}
+                sub={`日薪 ¥${(result.expectedAnnualSalary / 260).toFixed(0)}`}
+              />
+            )
           )}
         </div>
         <div className="mt-3 pt-3 border-t border-gray-100">
           <SalaryBar
             actual={result.totalCompensation}
-            expected={result.industryAvgSalary > 0 ? result.industryAvgSalary : result.expectedAnnualSalary}
-            label={result.industryAvgSalary > 0 ? '行业平均' : '学历期望'}
+            expected={
+              result.positionRefSalary
+                ? result.positionRefSalary
+                : result.industryAvgSalary > 0 ? result.industryAvgSalary : result.expectedAnnualSalary
+            }
+            label={
+              result.positionRefSalary
+                ? '职位参考'
+                : result.industryAvgSalary > 0 ? '行业平均' : '学历期望'
+            }
           />
         </div>
       </div>

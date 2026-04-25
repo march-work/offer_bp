@@ -48,6 +48,7 @@ import {
   DEFAULT_WHOLE_RENT_AREA,
   DEFAULT_SHARED_RENT_AREA,
   DOWN_PAYMENT_RATIO,
+  resolveInternalIndustry,
 } from './constants';
 
 
@@ -144,14 +145,16 @@ export function calculateExpectedSalary(
 ): { expectedAnnual: number; expectedDaily: number; industryAvgSalary: number; industryFactor: number; cityFactor: number } {
   const baseWan = scoreToExpectedAnnualWan(educationScore);
   const cityFactor = getCityFactor(cityIncome);
+  // 解析为统计局内部行业名（白皮书行业名需映射）
+  const internalIndustry = resolveInternalIndustry(industry);
   // 优先使用 JSON 真实行业薪资数据，无数据时回退到 INDUSTRY_FACTOR 兜底表
-  let industryFactor = INDUSTRY_FACTOR[industry] ?? 1.0;
+  let industryFactor = INDUSTRY_FACTOR[internalIndustry] ?? 1.0;
   let industryAvgSalary = 0;
-  if (industrySalaries && industrySalaries[industry]) {
+  if (industrySalaries && industrySalaries[internalIndustry]) {
     const salaries = Object.values(industrySalaries) as number[];
     const cityAvg = salaries.reduce((a, b) => a + b, 0) / salaries.length;
-    industryFactor = industrySalaries[industry] / cityAvg;
-    industryAvgSalary = industrySalaries[industry];
+    industryFactor = industrySalaries[internalIndustry] / cityAvg;
+    industryAvgSalary = industrySalaries[internalIndustry];
   }
   const expectedAnnual = baseWan * cityFactor * industryFactor * 10000;
   const expectedDaily = expectedAnnual / STANDARD_WORKING_DAYS;
@@ -313,6 +316,7 @@ export function calculateFreshGradScore(
   input: FreshGradInput,
   cityData: CityCalculationData,
   citySavingsRateAvg: number = CITY_SAVINGS_RATE_AVG,
+  positionRefSalary?: number,
 ): FreshGradResult {
   const tc = calculateTotalCompensation(input);
   const workingDays = calculateWorkingDays(input);
@@ -349,5 +353,6 @@ export function calculateFreshGradScore(
     industryAvgSalary,
     industryFactor,
     cityFactor,
+    ...(positionRefSalary ? { positionRefSalary } : {}),
   };
 }

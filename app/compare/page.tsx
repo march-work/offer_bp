@@ -20,6 +20,7 @@ import { useCompareStore, MAX_COMPARE_ITEMS } from '@/lib/compare-store';
 import { CompareCard } from '@/components/compare/CompareCard';
 import { CompareTable } from '@/components/compare/CompareTable';
 import { RadarChart } from '@/components/compare/RadarChart';
+import { IndustrySelect } from '@/components/ui/IndustrySelect';
 
 // 新 offer 的默认值将基于 DEFAULT_FRESH_GRAD_INPUT 与共享字段合并得到
 
@@ -33,7 +34,8 @@ interface OfferSlot {
   cityCalcData: CityCalculationData | null;
   districts: string[];
   dataLoading: boolean;
-  mode: 'quick' | 'detailed'; // ← NEW per-card mode
+  mode: 'quick' | 'detailed';
+  positionRefSalary: number;
 }
 
 let nextSlotId = 1;
@@ -74,6 +76,7 @@ function ComparePage() {
         districts: [],
         dataLoading: false,
         mode: 'quick',
+        positionRefSalary: 0,
       }));
     });
   }, [storeItems]);
@@ -88,6 +91,7 @@ function ComparePage() {
       masterLevel: sharedFields.masterLevel,
       phdLevel: sharedFields.phdLevel,
       targetIndustry: sharedFields.targetIndustry,
+      targetPosition: sharedFields.targetPosition ?? '',
     };
     setSlots((prev) => {
       // 使用已有 slot 中最大的字母序号 +1，避免重复
@@ -107,6 +111,7 @@ function ComparePage() {
         districts: [],
         dataLoading: false,
         mode: 'quick',
+        positionRefSalary: 0,
       }];
     });
   }, [slots.length, sharedFields]);
@@ -194,7 +199,7 @@ function ComparePage() {
     if (!slot?.cityCalcData) return;
     const tc = calculateTotalCompensation(slot.input);
     if (tc <= 0) return;
-    const result = calculateFreshGradScore(slot.input, slot.cityCalcData);
+    const result = calculateFreshGradScore(slot.input, slot.cityCalcData, undefined, slot.positionRefSalary || undefined);
     // 两个 setState 分别调用（事件处理器中安全）
     setSlots((prev) => prev.map((s) => s.id === id ? { ...s, result } : s));
     addItem(slot.label, slot.input, result);
@@ -210,6 +215,11 @@ function ComparePage() {
       result: null,
     })));
   }, [sharedFields, setSharedFields]);
+
+  // ── 共享区职位薪资变更时，同步到所有 slot ──
+  const handlePositionSalaryChange = useCallback((salary: number) => {
+    setSlots((prev) => prev.map((s) => ({ ...s, positionRefSalary: salary })));
+  }, []);
 
   // 有结果的 items（给 CompareTable 用）
   const comparableItems: CompareItem[] = useMemo(
@@ -330,18 +340,16 @@ function ComparePage() {
                 </div>
               </div>
             </div>
-            {/* 行业 */}
+            {/* 行业 + 职位 */}
             <div>
-              <div className="text-xs text-gray-500 mb-1.5">专业/行业</div>
-              <select
+              <IndustrySelect
                 value={sharedFields.targetIndustry}
-                onChange={(e) => handleSharedFieldChange('targetIndustry', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {INDUSTRY_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
+                position={sharedFields.targetPosition ?? ''}
+                city=""
+                onIndustryChange={(v) => handleSharedFieldChange('targetIndustry', v)}
+                onPositionChange={(v) => handleSharedFieldChange('targetPosition', v)}
+                onPositionSalaryChange={handlePositionSalaryChange}
+              />
             </div>
           </div>
         </div>

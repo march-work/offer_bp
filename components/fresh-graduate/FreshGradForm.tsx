@@ -8,7 +8,6 @@ import {
   MASTER_OPTIONS,
   PHD_OPTIONS,
   CITY_OPTIONS,
-  INDUSTRY_OPTIONS,
   WORK_ENV_OPTIONS,
   CAFETERIA_OPTIONS,
   LOCATION_PREF_OPTIONS,
@@ -24,6 +23,7 @@ import { FormSection } from '@/components/ui/FormSection';
 import { SelectField } from '@/components/ui/SelectField';
 import { NumberField } from '@/components/ui/NumberField';
 import { CheckboxField } from '@/components/ui/CheckboxField';
+import { IndustrySelect } from '@/components/ui/IndustrySelect';
 
 interface Props {
   input: FreshGradInput;
@@ -32,9 +32,10 @@ interface Props {
   districts: string[];
   dataLoading: boolean;
   mode: EvalMode;
+  onPositionSalaryChange?: (salary: number) => void;
 }
 
-export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoading, mode }: Props) {
+export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoading, mode, onPositionSalaryChange }: Props) {
   const isQuick = mode === 'quick';
   const {
     handleSocialInsuranceSelect,
@@ -77,11 +78,13 @@ export function FreshGradForm({ input, onChange, onCalculate, districts, dataLoa
             hint={input.targetDistrict ? undefined : '不选则用城市均价'}
           />
         )}
-        <SelectField
-          label="你的专业"
+        <IndustrySelect
           value={input.targetIndustry}
-          options={INDUSTRY_OPTIONS}
-          onChange={(v) => onChange('targetIndustry', v)}
+          position={input.targetPosition ?? ''}
+          city={input.targetCity}
+          onIndustryChange={(v) => onChange('targetIndustry', v)}
+          onPositionChange={(v) => onChange('targetPosition', v)}
+          onPositionSalaryChange={onPositionSalaryChange ?? (() => {})}
         />
         {!isQuick && (
           <SelectField
